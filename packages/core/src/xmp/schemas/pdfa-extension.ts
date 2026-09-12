@@ -19,7 +19,7 @@ export const pdfaExtensionSchema: XmpSchema = {
 	prefix: 'pdfaExtension',
 	properties: {
 		schemas: {
-			valueType: xmpBag(xmpText), // Placeholder!
+			valueType: xmpBag(pdfaExtensionSchema), // Placeholder!
 		},
 	},
 };

@@ -11,7 +11,7 @@ import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
  * * Schema namespace URI: `http://www.aiim.org/pdfa/ns/property#`.
  * * Required schema namespace prefix: `pdfaProperty`.
  */
-export const pdfaFieldSchema: XmpSchema = {
+export const pdfaPropertySchema: XmpSchema = {
 	name: 'Field',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/property#',
 	prefix: 'pdfaProperty',
