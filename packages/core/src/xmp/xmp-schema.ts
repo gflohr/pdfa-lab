@@ -140,30 +140,32 @@ export type XmpList<T extends XmpValueType = XmpLiteral> =
 export type XmpValueType = XmpLiteral | XmpStruct | XmpList;
 
 export const xmpCoreBaseTypes = {
-	Boolean: xmpBoolean,
-	Date: xmpDate,
-	Integer: xmpInteger,
-	Real: xmpReal,
-	Text: xmpText,
+	boolean: xmpBoolean,
+	date: xmpDate,
+	integer: xmpInteger,
+	real: xmpReal,
+	text: xmpText,
 } as const;
 
-export type XmpCoreBaseType = keyof typeof xmpCoreBaseTypes;
+export type XmpCoreBaseType =
+	| keyof typeof xmpCoreBaseTypes
+	| 'alt'
+	| 'bag'
+	| 'seq'
+	| 'lang alt';
 
 export const xmpCoreDerivedTypes = {
-	AgentName: xmpBoolean,
-	Choice: xmpChoice,
-	GUID: xmpGUID,
-	Locale: xmpLocale,
-	MIMEType: xmpMIMEType,
-	Part: xmpPart,
-	ProperName: xmpProperName,
+	agentname: xmpBoolean,
+	choice: xmpChoice,
+	guid: xmpGUID,
+	locale: xmpLocale,
+	mimetype: xmpMIMEType,
+	part: xmpPart,
+	propername: xmpProperName,
 	RenditionClass: xmpRenditionClass,
 	ResourceRef: xmpResourceRef,
 	URI: xmpURI,
 	URL: xmpURL,
-	// Lang Alt: ?
-	// Thumbnail: ?
-	// XPath: ?
 } as const;
 export type XmpCoreDerivedType = keyof typeof xmpCoreDerivedTypes;
 

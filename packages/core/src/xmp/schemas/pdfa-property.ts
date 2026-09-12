@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import { xmpText } from '../value-types/core/basic/text.js';
-import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
 import { xmpClosedChoice } from '../value-types/core/derived/closed-choice.js';
+import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
 
 /**
  * PDF/A Property namespace.
