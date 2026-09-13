@@ -7,12 +7,12 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
-import { dublinCoreNamespace } from './namespaces/dublin-core.js';
-import { pdfaExtensionNamespace } from './namespaces/pdfa-extension.js';
-import { xmpNamespace } from './namespaces/xmp.js';
-import { xmpMediaManagementNamespace } from './namespaces/xmp-media-management.js';
+import { dublinCoreSchema } from './schemas/dublin-core.js';
+import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
+import { xmpSchema } from './schemas/xmp.js';
+import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
 import { parsePath } from './util/parse-path.js';
-import type { XmpNamespaceSchema, XmpSchema } from './xmp-namespace.js';
+import type { XmpSchema } from './xmp-schema.js';
 
 /**
  * Default base IRI.
@@ -102,7 +102,7 @@ export class XmpDocument {
 		'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 
 	/** The Dublin Core namespace. Preferred prefix: `dc`. */
-	public static readonly NS_DC = 'http://purl.org/dc/elements/1.1/';
+	static readonly NS_DC = 'http://purl.org/dc/elements/1.1/';
 
 	/** The Adobe XMP Basic namespace. Preferred prefix: `xmp`. */
 	public static readonly NS_XMP = 'http://ns.adobe.com/xap/1.0/';
@@ -116,8 +116,7 @@ export class XmpDocument {
 
 	private doc: Document;
 	private kb = rdflib.graph();
-	private namespaces: Record<string, string> = {};
-	private schemas: Record<string, XmpNamespaceSchema> = {};
+	private schemas: Record<string, XmpSchema> = {};
 
 	constructor(
 		xmlString?: string,
@@ -164,22 +163,14 @@ export class XmpDocument {
 
 		rdflib.parse(xmlString, this.kb, baseIRI, 'application/rdf+xml');
 
-		this.registerNamespace('dc', XmpDocument.NS_DC, dublinCoreNamespace);
-		this.kb.setPrefixForURI('dc', XmpDocument.NS_DC);
-		this.registerNamespace('xmp', XmpDocument.NS_XMP, xmpNamespace);
-		this.kb.setPrefixForURI('xmp', XmpDocument.NS_XMP);
-		this.registerNamespace(
-			'xmpMM',
-			XmpDocument.NS_XMPMM,
-			xmpMediaManagementNamespace,
-		);
+		this.registerNamespace('dc', dublinCoreSchema);
+		this.kb.setPrefixForURI('dc', dublinCoreSchema.namespaceURI);
+		this.registerNamespace('xmp', xmpSchema);
+		this.kb.setPrefixForURI('xmp', xmpSchema.namespaceURI);
+		this.registerNamespace('xmpMM', xmpMediaManagementSchema);
 		this.kb.setPrefixForURI('xmpMM', XmpDocument.NS_XMPMM);
 
-		this.registerNamespace(
-			'pdfaExtension',
-			XmpDocument.NS_PDFA_EXTENSION,
-			pdfaExtensionNamespace,
-		);
+		this.registerNamespace('pdfaExtension', pdfaExtensionSchema);
 		this.kb.setPrefixForURI('pdfaExtension', XmpDocument.NS_PDFA_EXTENSION);
 	}
 
@@ -218,13 +209,19 @@ export class XmpDocument {
 		format: RdfSerialisationFormat = 'application/rdf+xml',
 		options: RdfSerialisationOptions = {},
 	): string {
+		const namespaces: Record<string, string> = {};
+		for (const prefix in this.schemas) {
+			const schema = this.schemas[prefix]!;
+			namespaces[prefix] = schema.namespaceURI;
+		}
+
 		const output = rdflib.serialize(
 			null,
 			this.kb,
 			this.baseIRI,
 			format,
 			undefined,
-			{ ...options, namespaces: this.namespaces },
+			{ ...options, namespaces },
 		);
 		if (!output) {
 			throw new Error(`Invalid output format '${format}'!`);
@@ -290,38 +287,27 @@ ${output}</x:xmpmeta>
 	 * * `xmpTPg`
 	 *
 	 * @param prefix - the prefix to register (must be non-empty)
-	 * @param namespace
 	 * @param schema
-	 * @see {@link XMPDocument.NS_IPTC4XMPCORE}, {@link XmpDocument.NS_CRS}, {@link XmpDocument.NS_DC}, {@link XMPDocument.NS_EXIF}, {@link XMPDocument.NS_PDF}, {@link XMPDocument.NS_PHOTOSHOP}, {@link XMPDocument.NS_TIFF}, {@link XMPDocument.NS_XMP}, {@link XMPDocument.NS_XMPBJ}, {@link XMPDocument.NS_XMPDM}, {@link XMPDocument.NS_XMPRIGHTS}, {@link XMPDocument.NS_XMPTPG}.
 	 */
-	public registerNamespace(
-		prefix: string,
-		namespace: string,
-		schema: XmpNamespaceSchema,
-	) {
+	public registerNamespace(prefix: string, schema: XmpSchema) {
 		if (!prefix?.length) {
 			throw new Error('Missing or empty prefix argument!');
 		}
 
-		if (!namespace?.length) {
-			throw new Error('Missing or empty namespace argument!');
-		}
-
 		if (!schema) {
-			throw new Error('The schema argument must be a valibot object schema!');
+			throw new Error('No schema specified!');
 		}
 
-		if (this.namespaces[prefix]) {
+		if (!schema.namespaceURI) {
+			throw new Error('No namespace URI specified!');
+		}
+
+		if (this.schemas[prefix]) {
 			throw new Error(
-				`Prefix '${prefix}' is already registered for URL '${this.namespaces[prefix]}'!`,
+				`Prefix '${prefix}' is already registered for URL '${this.schemas[prefix].namespaceURI}'!`,
 			);
 		}
 
-		if (!schema.entries) {
-			throw new Error('Schema must be an object based schema!');
-		}
-
-		this.namespaces[prefix] = namespace;
 		this.schemas[prefix] = schema;
 	}
 
@@ -349,7 +335,7 @@ ${output}</x:xmpmeta>
 		lang?: string,
 		rdfIndex?: number,
 	): string | string[] | null {
-		const namespaceUri = this.namespaces[prefix];
+		const namespaceUri = this.schemas[prefix]?.namespaceURI;
 		if (!namespaceUri) {
 			throw new Error(`Unknown prefix: '${prefix}'`);
 		}
@@ -475,7 +461,7 @@ ${output}</x:xmpmeta>
 
 		const token = tokens[0]!;
 
-		const namespaceUri = this.namespaces[token.prefix];
+		const namespaceUri = this.schemas[token.prefix]?.namespaceURI;
 		if (!namespaceUri) {
 			throw new Error(`Unknown prefix: '${token.prefix}'`);
 		}
@@ -582,36 +568,32 @@ ${output}</x:xmpmeta>
 
 		const token = tokens[0]!;
 
-		const namespaceUri = this.namespaces[token.prefix];
-		if (!namespaceUri) {
-			throw new Error(`Unknown prefix: '${token.prefix}'`);
+		const schema = this.schemas[token.prefix];
+		if (!schema) {
+			throw new Error(`Unknown prefix: '${token.prefix}`);
 		}
+
+		const namespaceUri = this.schemas[token.prefix]?.namespaceURI;
 
 		const subject = rdflib.sym(this.baseIRI);
 		const predicate = rdflib.sym(namespaceUri + token.name);
 
-		const namespaceSchema = this.schemas[token.prefix]!;
-		const schema = namespaceSchema.entries[token.name];
-		if (!schema) {
-			throw new Error(`The node '${path}' is unknown!`);
+		const property = schema.properties[token.name];
+		if (!property) {
+			throw new Error(`Unknown property: '${token.prefix}:${token.name}'`);
 		}
 
-		if (schema.expects.includes('Array')) {
+		const termType = property.valueType.termType;
+
+		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
 			const node = rdflib.sym(`${namespaceUri}${token.name}`);
-			const listType =
-				(schema as XmpSchema).xmpContainer === 'Seq' ? 'Seq' : 'Bag';
-			const container = this.getContainer(subject, node, token.name, listType);
+			const container = this.getContainer(subject, node, token.name, termType);
 
 			if (!token.index) {
 				this.setListItem(container, value, options);
 			} else {
 				this.setIndexedListItem(container, token.index, value, options);
 			}
-		} else if ((schema as XmpSchema).xmpContainer === 'Alt') {
-			const node = rdflib.sym(`${namespaceUri}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, 'Alt');
-
-			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
 			this.setLiteralMetaInfo(subject, predicate, value, options);
 		}

@@ -1,6 +1,6 @@
 import * as v from 'valibot';
-import { xmpText } from '../value-types/core/basic/text.js';
-import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
+import { type XmpStruct, xmpLiteral } from '../../xmp-schema.js';
+import { xmpText } from '../core/basic/text.js';
 
 /**
  * PDF/A Field namespace.
@@ -12,8 +12,9 @@ import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
  * * Schema namespace URI: `http://www.aiim.org/pdfa/ns/field#`.
  * * Required schema namespace prefix: `pdfaField`.
  */
-export const pdfaFieldSchema: XmpSchema = {
+export const pdfaField: XmpStruct = {
 	name: 'Field',
+	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/field#',
 	prefix: 'pdfaField',
 	properties: {

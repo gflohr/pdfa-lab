@@ -1,4 +1,4 @@
-import { xmpText } from '../value-types/core/basic/text.js';
+import { pdfaSchema } from '../value-types/pdfa/pdfa-schema.js';
 import { type XmpSchema, xmpBag } from '../xmp-schema.js';
 
 /**
@@ -19,7 +19,7 @@ export const pdfaExtensionSchema: XmpSchema = {
 	prefix: 'pdfaExtension',
 	properties: {
 		schemas: {
-			valueType: xmpBag(pdfaExtensionSchema), // Placeholder!
+			valueType: xmpBag(pdfaSchema),
 		},
 	},
 };

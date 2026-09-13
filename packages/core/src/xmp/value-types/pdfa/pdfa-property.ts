@@ -1,7 +1,6 @@
-import * as v from 'valibot';
-import { xmpText } from '../value-types/core/basic/text.js';
-import { xmpClosedChoice } from '../value-types/core/derived/closed-choice.js';
-import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
+import type { XmpStruct } from '../../xmp-schema.js';
+import { xmpText } from '../core/basic/text.js';
+import { xmpClosedChoice } from '../core/derived/closed-choice.js';
 
 /**
  * PDF/A Property namespace.
@@ -11,8 +10,9 @@ import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
  * * Schema namespace URI: `http://www.aiim.org/pdfa/ns/property#`.
  * * Required schema namespace prefix: `pdfaProperty`.
  */
-export const pdfaPropertySchema: XmpSchema = {
-	name: 'Field',
+export const pdfaProperty: XmpStruct = {
+	name: 'Property',
+	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/property#',
 	prefix: 'pdfaProperty',
 	properties: {

@@ -1,8 +1,8 @@
 import * as v from 'valibot';
-import { xmpText } from '../value-types/core/basic/text.js';
-import { xmpChoice } from '../value-types/core/derived/choice.js';
-import { xmpURI } from '../value-types/core/derived/uri.js';
-import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
+import { type XmpStruct, xmpLiteral } from '../../xmp-schema.js';
+import { xmpText } from '../core/basic/text.js';
+import { xmpChoice } from '../core/derived/choice.js';
+import { xmpURI } from '../core/derived/uri.js';
 
 /**
  * PDF/A Value Type namespace.
@@ -20,8 +20,9 @@ import { type XmpSchema, xmpLiteral } from '../xmp-schema.js';
  * * Schema namespace URI: http://www.aiim.org/pdfa/ns/type#
  * * Required schema namespace prefix: `pdfaType`
  */
-export const pdfaFieldSchema: XmpSchema = {
-	name: 'Field',
+export const pdfaFieldSchema: XmpStruct = {
+	name: 'ValueType',
+	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/type#',
 	prefix: 'pdfaType',
 	properties: {

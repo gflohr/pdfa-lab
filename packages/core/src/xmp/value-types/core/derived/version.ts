@@ -14,8 +14,7 @@ import { xmpResourceEvent } from './resource-event.js';
  */
 export const xmpVersion: XmpStruct = {
 	name: 'Version',
-	description:
-		'Describes one version of a document.',
+	description: 'Describes one version of a document.',
 	termType: 'Struct',
 	namespaceURI: 'http://ns.adobe.com/xap/1.0/sType/Version#',
 	prefix: 'stVer',

@@ -1,4 +1,3 @@
-import * as v from 'valibot';
 import { type XmpStruct, xmpBag } from '../../../xmp-schema.js';
 import { xmpText } from '../basic/text.js';
 

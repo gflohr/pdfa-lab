@@ -1,8 +1,8 @@
 import type * as v from 'valibot';
-import { xmpBoolean } from './data-types/boolean.js';
-import { xmpInteger } from './data-types/integer.js';
 import { xmpDimensions } from './value-types/complex/dimensions.js';
+import { xmpBoolean } from './value-types/core/basic/boolean.js';
 import { xmpDate } from './value-types/core/basic/date.js';
+import { xmpInteger } from './value-types/core/basic/integer.js';
 import { xmpReal } from './value-types/core/basic/real.js';
 import { xmpText } from './value-types/core/basic/text.js';
 import { xmpChoice } from './value-types/core/derived/choice.js';
@@ -80,15 +80,13 @@ export interface XmpStruct extends XmpBaseValueType {
 	properties: Record<string, XmpProperty>;
 }
 
-export interface XmpBag<T = XmpLiteral> extends XmpBaseValueType {
+export interface XmpBag<T = XmpValueType> extends XmpBaseValueType {
 	termType: 'Bag';
 
 	itemType: T;
 }
 
-export function xmpBag<T extends XmpValueType = XmpLiteral>(
-	itemType: T,
-): XmpBag<T> {
+export function xmpBag<T extends XmpValueType>(itemType: T): XmpBag<T> {
 	return {
 		termType: 'Bag',
 
@@ -96,48 +94,36 @@ export function xmpBag<T extends XmpValueType = XmpLiteral>(
 	};
 }
 
-export interface XmpSeq<T extends XmpValueType> extends XmpBaseValueType {
+export interface XmpSeq<T = XmpValueType> extends XmpBaseValueType {
 	termType: 'Seq';
 
 	itemType: T;
 }
 
-export function xmpSeq<T extends XmpValueType = XmpLiteral>(
-	itemType: T,
-): XmpSeq<T> {
+export function xmpSeq<T extends XmpValueType>(itemType: T): XmpSeq<T> {
 	return {
 		termType: 'Seq',
 		itemType,
 	};
 }
-export interface XmpAlt<T extends XmpValueType> extends XmpBaseValueType {
+export interface XmpAlt<T = XmpValueType> extends XmpBaseValueType {
 	termType: 'Alt';
-	qualifierPrefix: string;
-	qualifier: string;
 	itemType: T;
 }
-export function xmpAlt<T extends XmpValueType = XmpLiteral>(
-	itemType: T,
-	qualifierPrefix: string,
-	qualifier: string,
-): XmpAlt<T> {
+export function xmpAlt<T extends XmpValueType>(itemType: T): XmpAlt<T> {
 	return {
 		termType: 'Alt',
-		qualifierPrefix,
-		qualifier,
 		itemType,
 	};
 }
 
-export function xmpLangAlt<T extends XmpValueType = XmpLiteral>(itemType: T) {
-	return xmpAlt<T>(itemType, 'xml', 'lang');
+export function xmpLangAlt<T extends XmpValueType = XmpValueType>(itemType: T) {
+	// FIXME! We need the xml:lang attribute!
+	return xmpAlt<T>(itemType);
 }
 
-export type XmpList<T extends XmpValueType = XmpLiteral> =
-	| XmpBag
-	| XmpSeq<T>
-	| XmpAlt<T>;
-export type XmpValueType = XmpLiteral | XmpStruct | XmpList;
+export type XmpList<T extends XmpValueType> = XmpBag<T> | XmpSeq<T> | XmpAlt<T>;
+export type XmpValueType = XmpLiteral | XmpStruct | XmpBag | XmpSeq | XmpAlt;
 
 export const xmpCoreBaseTypes = {
 	boolean: xmpBoolean,
