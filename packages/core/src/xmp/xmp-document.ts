@@ -7,13 +7,13 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
+import type { RdfProperty, RdfValueType } from '../rdf/rdf-schema.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
 import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
 import { parsePath } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
-import { RdfProperty, RdfValueType } from '../rdf/rdf-schema.js';
 
 /**
  * Default base IRI.
@@ -214,10 +214,7 @@ export class XmpDocument {
 
 		// Workaround for https://github.com/linkeddata/rdflib.js/issues/869.
 		if (format === 'application/rdf+xml') {
-			return output.replace(
-				/<([^>\s]+)\s+rdf:parseType="Resource">(\s*<(?:rdf:Alt|rdf:Bag|rdf:Seq)[\s>])/g,
-				'<$1>$2',
-			);
+			return this.sanitizeRdfXml(output);
 		}
 
 		return output;
@@ -303,7 +300,7 @@ ${output}</x:xmpmeta>
 
 		this.schemas[prefix] = schema;
 		this.namespaces[prefix] = schema.namespaceURI;
-		this.kb.setPrefixForURI('dc', schema.namespaceURI);
+		this.kb.setPrefixForURI(prefix, schema.namespaceURI);
 		this.registerPropertyNamespaces(schema.properties);
 	}
 
@@ -319,14 +316,19 @@ ${output}</x:xmpmeta>
 			const prefix = valueType.prefix;
 			const namespaceURI = valueType.namespaceURI;
 
-			if (typeof this.namespaces[prefix] !== 'undefined'
-				&& this.namespaces[prefix] !== namespaceURI) {
-				throw new Error(`Cannot register prefix '${prefix}'`
-					+ ` for namespace URI '${namespaceURI}': already registered`
-					+ ` for namespace URI '${this.namespaces[prefix]}'!`);
+			if (
+				typeof this.namespaces[prefix] !== 'undefined' &&
+				this.namespaces[prefix] !== namespaceURI
+			) {
+				throw new Error(
+					`Cannot register prefix '${prefix}'` +
+						` for namespace URI '${namespaceURI}': already registered` +
+						` for namespace URI '${this.namespaces[prefix]}'!`,
+				);
 			}
 
 			this.namespaces[prefix] = namespaceURI;
+			this.kb.setPrefixForURI(prefix, namespaceURI);
 
 			this.registerPropertyNamespaces(valueType.properties);
 		}
@@ -356,7 +358,7 @@ ${output}</x:xmpmeta>
 		lang?: string,
 		rdfIndex?: number,
 	): string | string[] | null {
-		const namespaceUri = this.schemas[prefix]?.namespaceURI;
+		const namespaceUri = this.namespaces[prefix];
 		if (!namespaceUri) {
 			throw new Error(`Unknown prefix: '${prefix}'`);
 		}
@@ -479,7 +481,7 @@ ${output}</x:xmpmeta>
 
 		const token = tokens[0]!;
 
-		const namespaceUri = this.schemas[token.prefix]?.namespaceURI;
+		const namespaceUri = this.namespaces[token.prefix];
 		if (!namespaceUri) {
 			throw new Error(`Unknown prefix: '${token.prefix}'`);
 		}
@@ -574,31 +576,68 @@ ${output}</x:xmpmeta>
 		const tokens = parsePath(path);
 		if (!tokens.length) {
 			throw new Error('Path must not be empty!');
-		} else if (tokens.length > 1) {
-			throw new Error('Nested meta information is not yet implemented!');
 		}
 
-		const token = tokens[0]!;
+		const firstToken = tokens[0]!;
 
-		const schema = this.schemas[token.prefix];
+		const schema = this.schemas[firstToken.prefix];
 		if (!schema) {
-			throw new Error(`Unknown prefix: '${token.prefix}`);
+			throw new Error(`Unknown prefix: '${tokens[0]!.prefix}`);
 		}
 
-		const namespaceUri = this.schemas[token.prefix]?.namespaceURI;
-
-		const subject = rdflib.sym(this.baseIRI);
-		const predicate = rdflib.sym(namespaceUri + token.name);
-
-		const property = schema.properties[token.name];
+		let property: RdfProperty | undefined = schema.properties[firstToken.name];
 		if (!property) {
-			throw new Error(`Unknown property: '${token.prefix}:${token.name}'`);
+			throw new Error(
+				`Schema registered for prefix` +
+					` '${firstToken.prefix}' has no property named` +
+					` '${firstToken.name}'!`,
+			);
 		}
+		let valueType: RdfValueType = {
+			termType: 'Struct',
+			...schema,
+		};
+
+		let subject: rdflib.NamedNode | rdflib.BlankNode = rdflib.sym(this.baseIRI);
+		for (let i = 0; i < tokens.length - 1; i++) {
+			const token = tokens[i]!;
+			// FIXME! This is not sufficient. We could be inside of a list!
+			subject = this.getStructure(subject, token.prefix, token.name);
+
+			if (valueType.termType === 'Struct') {
+				property = valueType.properties[token.name];
+				if (!property) {
+					throw new Error(
+						`Schema registered for prefix` +
+							` '${token.prefix}' has no property named` +
+							` '${token.name}'!`,
+					);
+				}
+			} else if (valueType.termType === 'Literal') {
+				throw new Error(
+					`Intermediate node '${token.prefix}:${token.name}'` +
+						` in path '${path}' cannot be a literal!`,
+				);
+			} else {
+				// Some list type.
+				// How to set property???
+				throw new Error('TODO!');
+			}
+
+			valueType = property.valueType;
+		}
+
+		// This is the leaf, which must be a literal.
+		const token = tokens[tokens.length - 1]!;
+
+		const namespaceURI = this.namespaces[token.prefix]!;
+
+		const predicate = rdflib.sym(`${namespaceURI}${token.name}`);
 
 		const termType = property.valueType.termType;
 
 		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
-			const node = rdflib.sym(`${namespaceUri}${token.name}`);
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
 			const container = this.getContainer(subject, node, token.name, termType);
 
 			if (!token.index) {
@@ -607,7 +646,7 @@ ${output}</x:xmpmeta>
 				this.setIndexedListItem(container, token.index, value, options);
 			}
 		} else if (termType === 'Lang Alt') {
-			const node = rdflib.sym(`${namespaceUri}${token.name}`);
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
 			const container = this.getContainer(subject, node, token.name, 'Alt');
 
 			this.setLanguageAlternative(container, value, token.lang, options);
@@ -617,12 +656,11 @@ ${output}</x:xmpmeta>
 	}
 
 	private setLiteralMetaInfo(
-		subject: rdflib.NamedNode,
+		subject: rdflib.NamedNode | rdflib.BlankNode,
 		predicate: rdflib.NamedNode,
 		value: string,
 		options: XMPSetMetaInfoOptions,
 	) {
-		// 1. Remove existing triple(s) for this predicate (overwrite).
 		const existingQuads = this.kb.statementsMatching(subject, predicate, null);
 		if (existingQuads.length && options.noOverwrite) {
 			return;
@@ -630,12 +668,11 @@ ${output}</x:xmpmeta>
 
 		this.kb.removeStatements(existingQuads);
 
-		// 2. Add the new value
 		this.kb.add(subject, predicate, rdflib.literal(value));
 	}
 
 	private getContainer(
-		subject: rdflib.NamedNode,
+		subject: rdflib.NamedNode | rdflib.BlankNode,
 		node: rdflib.NamedNode,
 		name: string,
 		listType: 'Bag' | 'Seq' | 'Alt',
@@ -844,17 +881,19 @@ ${output}</x:xmpmeta>
 		return statements;
 	}
 
-	public getStructure(prefix: string, name: string): rdflib.BlankNode {
-		const subject = rdflib.sym(this.baseIRI);
+	private getStructure(
+		parent: rdflib.NamedNode | rdflib.BlankNode,
+		prefix: string,
+		name: string,
+	): rdflib.BlankNode {
 		const schema = this.schemas[prefix];
 		if (!schema) {
 			throw new Error(`No schema registered for prefix '${prefix}'.`);
 		}
 
 		const predicate = rdflib.sym(`${schema.namespaceURI}${name}`);
-		const existing = this.kb.any(subject, predicate, null);
+		const existing = this.kb.any(parent, predicate, null);
 
-		// 1. Reuse existing blank/named node and strip any container rdf:type (Alt/Bag/Seq)
 		if (
 			existing &&
 			(existing.termType === 'BlankNode' || existing.termType === 'NamedNode')
@@ -863,15 +902,62 @@ ${output}</x:xmpmeta>
 			return existing as rdflib.BlankNode;
 		}
 
-		// 2. Clear out any previous value if it was a literal
 		if (existing) {
-			this.kb.removeMany(subject, predicate, null);
+			this.kb.removeMany(parent, predicate, null);
 		}
 
-		// 3. Create new blank node and attach it to the root subject
 		const structNode = rdflib.blankNode();
-		this.kb.add(subject, predicate, structNode);
+		this.kb.add(parent, predicate, structNode);
 
 		return structNode;
+	}
+
+	private sanitizeRdfXml(xmlString: string): string {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(xmlString, 'text/xml');
+
+		const allElements = Array.from(doc.getElementsByTagName('*'));
+
+		for (const el of allElements) {
+			const hasParseType =
+				el.getAttributeNS(NS_RDF, 'parseType') === 'Resource' ||
+				el.getAttribute('rdf:parseType') === 'Resource';
+
+			if (!hasParseType) continue;
+
+			const childElements = Array.from(el.childNodes).filter(
+				(node): node is Element => node.nodeType === 1,
+			);
+
+			// Fix 1: Remove invalid parseType="Resource" from container
+			// parents (Alt/Bag/Seq).
+			const hasContainer = childElements.some(
+				(child) =>
+					child.namespaceURI === NS_RDF && child.localName &&
+					['Alt', 'Bag', 'Seq'].includes(child.localName),
+			);
+			if (hasContainer) {
+				el.removeAttributeNS(NS_RDF, 'parseType');
+				el.removeAttribute('rdf:parseType');
+				continue;
+			}
+
+			// Fix 2: Unwrap redundant <rdf:Description> inside
+			// parseType="Resource".
+			const descNode = childElements.find(
+				(child) =>
+					child.namespaceURI === NS_RDF && child.localName === 'Description',
+			);
+
+			if (descNode) {
+				// Hoist all children out of <rdf:Description> into the outer element
+				while (descNode.firstChild) {
+					el.insertBefore(descNode.firstChild, descNode);
+				}
+				el.removeChild(descNode);
+			}
+		}
+
+		return new XMLSerializer().serializeToString(doc);
 	}
 }

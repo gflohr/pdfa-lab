@@ -30,6 +30,7 @@ describe('XMP document', () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialiseXmp();
+
 			expect(xmp).toMatchSnapshot();
 		});
 	});
@@ -414,13 +415,20 @@ describe('XMP document', () => {
 	});
 
 	describe('Nested schemas', () => {
-		it.skip('should create nested data', () => {
+		it('should create nested data', () => {
 			const xmpDoc = new XmpDocument();
 
-			xmpDoc.setMetaInfo('xmpMM:DerivedFrom/stRef:documentID', 'abc-def-ghi-xyz');
+			xmpDoc.setMetaInfo(
+				'xmpMM:DerivedFrom/stRef:documentID',
+				'abc-def-ghi-xyz',
+			);
 
 			const xmp = xmpDoc.serialiseXmp();
-			console.log(xmp);
+
+			expect(xmp).toContain(
+				'<stRef:documentID>abc-def-ghi-xyz</stRef:documentID>',
+			);
+			expect(xmp).toMatchSnapshot();
 		});
 	});
 });

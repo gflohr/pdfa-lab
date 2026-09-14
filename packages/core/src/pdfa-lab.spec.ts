@@ -263,17 +263,7 @@ describe('PDFALab', () => {
 				const newPdfBytes = await lab.save();
 				const newLab = await PDFALab.from(newPdfBytes);
 				const xmp = newLab.extractXmp();
-				expect(xmp).toBe(`<rdf:RDF
- xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
- xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
- xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <rdf:Description rdf:about="">
-        <pdf:PDFVersion>1.7</pdf:PDFVersion>
-        <pdf:Producer>@pdfa-lab/core unit tests</pdf:Producer>
-        <dc:format>application/pdf</dc:format>
-    </rdf:Description>
-</rdf:RDF>
-`);
+				expect(xmp).toMatchSnapshot();
 			});
 
 			it('should overwrite existing metadata', async () => {
@@ -296,17 +286,7 @@ describe('PDFALab', () => {
 				const newPdfBytes = await lab.save();
 				const newLab = await PDFALab.from(newPdfBytes);
 				const xmp = newLab.extractXmp();
-				expect(xmp).toBe(`<rdf:RDF
- xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
- xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
- xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <rdf:Description rdf:about="">
-        <pdf:PDFVersion>1.7</pdf:PDFVersion>
-        <pdf:Producer>@pdfa-lab/core unit tests</pdf:Producer>
-        <dc:format>application/pdf</dc:format>
-    </rdf:Description>
-</rdf:RDF>
-`);
+				expect(xmp).toMatchSnapshot();
 			});
 		});
 	});
