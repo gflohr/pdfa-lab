@@ -18,30 +18,30 @@ exports[`PDFALab > XMP Metadata > Extract XMP Metadata > should extract existing
         <xmp:CreatorTool>e-invoice-eu 2.1.15 git+https://github.com/gflohr/e-invoice-eu</xmp:CreatorTool>
         <xmp:MetadataDate>2026-01-19T15:11:30+02:00</xmp:MetadataDate>
         <xmp:ModifyDate>2026-01-19T15:11:30+02:00</xmp:ModifyDate>
-        <dc:creator rdf:parseType="Resource">
+        <dc:creator>
            <rdf:Seq><rdf:li>Acme Ltd.</rdf:li></rdf:Seq>
         </dc:creator>
-        <dc:date rdf:parseType="Resource">
+        <dc:date>
            <rdf:Seq><rdf:li>2026-01-19T15:11:30+02:00</rdf:li></rdf:Seq>
         </dc:date>
-        <dc:description rdf:parseType="Resource">
+        <dc:description>
             <rdf:Alt>
                 <rdf:li xml:lang="x-default">Invoice 1234567890 dated 2024-09-24 issued by Acme Ltd.</rdf:li>
             </rdf:Alt>
         </dc:description>
         <dc:format>application/pdf</dc:format>
-        <dc:title rdf:parseType="Resource">
+        <dc:title>
             <rdf:Alt>
                 <rdf:li xml:lang="x-default">Invoice 1234567890 dated 2024-09-24 issued by Acme Ltd.</rdf:li>
             </rdf:Alt>
         </dc:title>
-        <pdfaExtension:schemas rdf:parseType="Resource">
+        <pdfaExtension:schemas>
             <rdf:Bag>
                 <rdf:li rdf:parseType="Resource">
                     <rdf:Description>
                         <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
                         <pdfaSchema:prefix>fx</pdfaSchema:prefix>
-                        <pdfaSchema:property rdf:parseType="Resource">
+                        <pdfaSchema:property>
                             <rdf:Seq>
                                 <rdf:li rdf:parseType="Resource">
                                     <rdf:Description>

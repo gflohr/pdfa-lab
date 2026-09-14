@@ -214,6 +214,13 @@ export class XmpDocument {
 			throw new Error(`Invalid output format '${format}'!`);
 		}
 
+		if (format === 'application/rdf+xml') {
+			return output.replace(
+				/<([^>\s]+)\s+rdf:parseType="Resource">(\s*<(?:rdf:Alt|rdf:Bag|rdf:Seq)[\s>])/g,
+				'<$1>$2',
+			);
+		}
+
 		return output;
 	}
 
@@ -345,10 +352,7 @@ ${output}</x:xmpmeta>
 
 		// RDF Container (Bag, Seq, Alt) or Struct node.
 		if (node.termType === 'BlankNode' || node.termType === 'NamedNode') {
-			const typeValue = this.kb.anyValue(
-				node,
-				RDF('type'),
-			);
+			const typeValue = this.kb.anyValue(node, RDF('type'));
 
 			switch (typeValue) {
 				case `${NS_RDF}Bag`:
@@ -468,10 +472,7 @@ ${output}</x:xmpmeta>
 			return null;
 		}
 
-		const typeValue = this.kb.anyValue(
-			node,
-			RDF('type'),
-		);
+		const typeValue = this.kb.anyValue(node, RDF('type'));
 
 		if (typeValue !== `${NS_RDF}Alt`) {
 			return null;
@@ -508,10 +509,7 @@ ${output}</x:xmpmeta>
 		rdfIndex: number | undefined,
 	) {
 		if (rdfIndex) {
-			const itemNode = this.kb.any(
-				container,
-				RDF(`_${rdfIndex}`),
-			);
+			const itemNode = this.kb.any(container, RDF(`_${rdfIndex}`));
 
 			return itemNode?.value ?? null;
 		}
@@ -675,11 +673,7 @@ ${output}</x:xmpmeta>
 		const highest = existing.length ? Math.max(...existing) : -1;
 
 		const rdfIndex = highest + 2;
-		this.kb.add(
-			container,
-			RDF(`_${rdfIndex}`),
-			rdflib.literal(value),
-		);
+		this.kb.add(container, RDF(`_${rdfIndex}`), rdflib.literal(value));
 	}
 
 	private setIndexedListItem(

@@ -148,7 +148,7 @@ exports[`XMP document > setMetaInfo > should append Seq items if requested 1`] =
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:creator rdf:parseType="Resource">
+			<dc:creator>
 			   <rdf:Seq><rdf:li>John Doe</rdf:li><rdf:li>Jane Doe</rdf:li></rdf:Seq>
 			</dc:creator>
 		</rdf:Description>
@@ -212,7 +212,7 @@ exports[`XMP document > setMetaInfo > should overwrite Seq items by default 1`] 
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:creator rdf:parseType="Resource">
+			<dc:creator>
 			   <rdf:Seq><rdf:li>Jane Doe</rdf:li></rdf:Seq>
 			</dc:creator>
 		</rdf:Description>
@@ -227,7 +227,7 @@ exports[`XMP document > setMetaInfo > should overwrite existing indices 1`] = `
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:subject rdf:parseType="Resource">
+			<dc:subject>
 			   <rdf:Bag><rdf:li>yksi</rdf:li><rdf:li>kaksi</rdf:li></rdf:Bag>
 			</dc:subject>
 		</rdf:Description>
@@ -260,7 +260,7 @@ exports[`XMP document > setMetaInfo > should set Seq items 1`] = `
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:creator rdf:parseType="Resource">
+			<dc:creator>
 			   <rdf:Seq><rdf:li>John Doe</rdf:li></rdf:Seq>
 			</dc:creator>
 		</rdf:Description>
@@ -275,7 +275,7 @@ exports[`XMP document > setMetaInfo > should set individual indices 1`] = `
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:subject rdf:parseType="Resource">
+			<dc:subject>
 			   <rdf:Bag><rdf:li>one</rdf:li><rdf:li>two</rdf:li></rdf:Bag>
 			</dc:subject>
 		</rdf:Description>
@@ -290,7 +290,7 @@ exports[`XMP document > setMetaInfo > should set language alternatives 1`] = `
 	 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 	 xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<rdf:Description rdf:about="">
-			<dc:title rdf:parseType="Resource">
+			<dc:title>
 				<rdf:Alt>
 					<rdf:li xml:lang="x-default">Internet For Dummies, Remedial Edition</rdf:li>
 				</rdf:Alt>

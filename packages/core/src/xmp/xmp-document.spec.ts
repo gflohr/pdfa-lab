@@ -141,7 +141,6 @@ describe('XMP document', () => {
 			xmpDoc.setMetaInfo('dc:title', title);
 
 			const xmp = xmpDoc.serialiseXmp();
-console.log(xmp);
 
 			expect(xmp).toContain(`<rdf:li xml:lang="x-default">${title}</rdf:li>`);
 			expect(xmp).toMatchSnapshot();
@@ -416,7 +415,6 @@ console.log(xmp);
 
 	describe('Nested schemas', () => {
 		it.skip('should create nested data', () => {
-			const xmpDoc = new XmpDocument();
 		});
 	});
 });
