@@ -13,6 +13,7 @@ import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
 import { parsePath } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
+import { RdfProperty, RdfValueType } from '../rdf/rdf-schema.js';
 
 /**
  * Default base IRI.
@@ -104,6 +105,7 @@ export class XmpDocument {
 	private doc: Document;
 	private kb = rdflib.graph();
 	private schemas: Record<string, XmpSchema> = {};
+	private namespaces: Record<string, string> = {};
 
 	constructor(
 		xmlString?: string,
@@ -151,14 +153,10 @@ export class XmpDocument {
 		rdflib.parse(xmlString, this.kb, baseIRI, 'application/rdf+xml');
 
 		this.registerNamespace('dc', dublinCoreSchema);
-		this.kb.setPrefixForURI('dc', dublinCoreSchema.namespaceURI);
 		this.registerNamespace('xmp', xmpSchema);
-		this.kb.setPrefixForURI('xmp', xmpSchema.namespaceURI);
 		this.registerNamespace('xmpMM', xmpMediaManagementSchema);
-		this.kb.setPrefixForURI('xmpMM', xmpMediaManagementSchema.namespaceURI);
 
 		this.registerNamespace('pdfaExtension', pdfaExtensionSchema);
-		this.kb.setPrefixForURI('pdfaExtension', pdfaExtensionSchema.namespaceURI);
 	}
 
 	private static createEmptyXmpMeta(): string {
@@ -304,6 +302,34 @@ ${output}</x:xmpmeta>
 		}
 
 		this.schemas[prefix] = schema;
+		this.namespaces[prefix] = schema.namespaceURI;
+		this.kb.setPrefixForURI('dc', schema.namespaceURI);
+		this.registerPropertyNamespaces(schema.properties);
+	}
+
+	private registerPropertyNamespaces(properties: Record<string, RdfProperty>) {
+		for (const name in properties) {
+			const property = properties[name]!;
+
+			if (property.valueType.termType !== 'Struct') {
+				continue;
+			}
+
+			const valueType = property.valueType;
+			const prefix = valueType.prefix;
+			const namespaceURI = valueType.namespaceURI;
+
+			if (typeof this.namespaces[prefix] !== 'undefined'
+				&& this.namespaces[prefix] !== namespaceURI) {
+				throw new Error(`Cannot register prefix '${prefix}'`
+					+ ` for namespace URI '${namespaceURI}': already registered`
+					+ ` for namespace URI '${this.namespaces[prefix]}'!`);
+			}
+
+			this.namespaces[prefix] = namespaceURI;
+
+			this.registerPropertyNamespaces(valueType.properties);
+		}
 	}
 
 	public getMetaInfo(path: string): string | string[] | null {
