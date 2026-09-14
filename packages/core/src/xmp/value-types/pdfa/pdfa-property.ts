@@ -1,4 +1,4 @@
-import type { XmpStruct } from '../../xmp-schema.js';
+import type { RdfStruct } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpClosedChoice } from '../core/derived/closed-choice.js';
 
@@ -10,7 +10,7 @@ import { xmpClosedChoice } from '../core/derived/closed-choice.js';
  * * Schema namespace URI: `http://www.aiim.org/pdfa/ns/property#`.
  * * Required schema namespace prefix: `pdfaProperty`.
  */
-export const pdfaProperty: XmpStruct = {
+export const pdfaProperty: RdfStruct = {
 	name: 'Property',
 	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/property#',

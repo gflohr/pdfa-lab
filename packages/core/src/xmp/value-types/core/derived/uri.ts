@@ -1,7 +1,7 @@
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * Text denoting an Internet Uniform Resource Identifier as defined in IETF
  * RFC 398.
  */
-export const xmpURI = xmpLiteral('URI');
+export const xmpURI = rdfLiteral('URI');

@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { type XmpStruct, xmpLiteral } from '../../xmp-schema.js';
+import { type RdfStruct, rdfLiteral } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpChoice } from '../core/derived/choice.js';
 import { xmpURI } from '../core/derived/uri.js';
@@ -11,7 +11,7 @@ import { xmpURI } from '../core/derived/uri.js';
  * are not defined in the XMP 2004 specification, i.e. for value types outside
  * of the following list:
  *
- * * Array types (these are container types which may contain one or more fields): {@link xmpAlt}, {@link xmpBag}, {@link xmpSeq}
+ * * Array types (these are container types which may contain one or more fields): {@link xmpAlt}, {@link rdfBag}, {@link rdfSeq}
  * * Basic value types: {@link xmpBoolean}, open {@link xmpChoice}, {@link xmpClosedChoice}, {@link xmpDimensions}, {@link xmpInteger}, `Lang Alt`, {@link xmpLocale}, {@link xmpMIMEType}, {@link xmpProperName}, {@link xmpReal}, {@link xmpText}, {@link xmpThumbnail}, {@link xmpURI}, {@link xmpURL}, {@link xmpXPath}
  * * Media Management value types: {@link xmpAgentName}, {@link xmpRenditionClass}, {@link xmpResourceEvent}, {@link xmpResourceRef}, {@link xmpVersion}
  * * Basic Job/Workflow value type: {@link xmpJob}
@@ -20,7 +20,7 @@ import { xmpURI } from '../core/derived/uri.js';
  * * Schema namespace URI: http://www.aiim.org/pdfa/ns/type#
  * * Required schema namespace prefix: `pdfaType`
  */
-export const pdfaFieldSchema: XmpStruct = {
+export const pdfaFieldSchema: RdfStruct = {
 	name: 'ValueType',
 	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/type#',
@@ -39,14 +39,14 @@ export const pdfaFieldSchema: XmpStruct = {
 		},
 
 		/**
-		 * Type: {@link xmpSeq} of {@link pdfaField}
+		 * Type: {@link rdfSeq} of {@link pdfaField}
 		 *
 		 * Optional description of the structured field.
 		 *
 		 * Separate entries are required for all fields in a structured type.
 		 */
 		field: {
-			valueType: xmpLiteral(
+			valueType: rdfLiteral(
 				'name',
 				[v.regex(/^[A-Za-z_][A-Za-z0-9_.-]*$/)],
 				true,

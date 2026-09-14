@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * The name of an XMP processor, a {@link XmpText} value.
@@ -15,6 +15,6 @@ import { xmpLiteral } from '../../../xmp-schema.js';
  *
  * EXAMPLE "Adobe Acrobat 9.0 (Mac OS X 10.5)"
  */
-export const xmpAgentName = xmpLiteral('AgentName', [
+export const xmpAgentName = rdfLiteral('AgentName', [
 	v.regex(/^[^ \t]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]*\(.+\)$/),
 ]);

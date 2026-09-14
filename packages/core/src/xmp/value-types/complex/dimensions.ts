@@ -1,4 +1,4 @@
-import type { XmpStruct } from '../../xmp-schema.js';
+import type { RdfStruct } from '../../../rdf/rdf-schema.js';
 import { xmpReal } from '../core/basic/real.js';
 import { xmpChoice } from '../core/derived/choice.js';
 
@@ -10,7 +10,7 @@ import { xmpChoice } from '../core/derived/choice.js';
  * The field namespace URI is http://ns.adobe.com/xap/1.0/sType/Dimensions#
  * The preferred field namespace prefix is stDim
  */
-export const xmpDimensions: XmpStruct = {
+export const xmpDimensions: RdfStruct = {
 	name: 'Dimensions',
 	description: 'A structure containing dimensions for a drawn object.',
 	termType: 'Struct',

@@ -1,4 +1,4 @@
-import type { XmpStruct } from '../../../xmp-schema.js';
+import type { RdfStruct } from '../../../../rdf/rdf-schema.js';
 import { xmpDate } from '../basic/date.js';
 import { xmpText } from '../basic/text.js';
 import { xmpAgentName } from './agent-name.js';
@@ -18,7 +18,7 @@ import { xmpGUID } from './guid.js';
  * other fields need not be present. The fields, if used, shall be of the
  * specified types. The field content should be as described.
  */
-export const xmpResourceEvent: XmpStruct = {
+export const xmpResourceEvent: RdfStruct = {
 	name: 'ResourceEvent',
 	description:
 		'A structure denoting a high-level event that occurred in the processing of a resource.',

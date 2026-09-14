@@ -1,4 +1,4 @@
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * Part
@@ -77,4 +77,4 @@ import { xmpLiteral } from '../../../xmp-schema.js';
  * |                                 | start time is 0, meaning the beginning |
  * |                                 | of the relevant file.
  */
-export const xmpPart = xmpLiteral('Part');
+export const xmpPart = rdfLiteral('Part');

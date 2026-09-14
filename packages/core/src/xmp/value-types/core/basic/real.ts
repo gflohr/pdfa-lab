@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * A simple text value denoting a floating-point numeric value, written using=
@@ -17,7 +17,7 @@ import { xmpLiteral } from '../../../xmp-schema.js';
  * of the Real type may specify a required range or precision, such as
  * nonnegative or microsecond resolution (for a duration in seconds).
  */
-export const xmpReal = xmpLiteral('Real', [
+export const xmpReal = rdfLiteral('Real', [
 	v.regex(
 		/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/,
 		'Invalid XMP Real: must be a valid floating-point number string',

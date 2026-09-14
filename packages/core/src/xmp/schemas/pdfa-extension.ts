@@ -1,5 +1,6 @@
+import { rdfBag } from '../../rdf/rdf-schema.js';
 import { pdfaSchema } from '../value-types/pdfa/pdfa-schema.js';
-import { type XmpSchema, xmpBag } from '../xmp-schema.js';
+import type { XmpSchema } from '../xmp-schema.js';
 
 /**
  * PDF/A Extension namespace.
@@ -19,7 +20,7 @@ export const pdfaExtensionSchema: XmpSchema = {
 	prefix: 'pdfaExtension',
 	properties: {
 		schemas: {
-			valueType: xmpBag(pdfaSchema),
+			valueType: rdfBag(pdfaSchema),
 		},
 	},
 };

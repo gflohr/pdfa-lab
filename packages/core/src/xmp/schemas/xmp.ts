@@ -1,8 +1,9 @@
+import { rdfBag } from '../../rdf/rdf-schema.js';
 import { xmpDate } from '../value-types/core/basic/date.js';
 import { xmpText } from '../value-types/core/basic/text.js';
 import { xmpAgentName } from '../value-types/core/derived/agent-name.js';
 import { xmpProperName } from '../value-types/core/derived/proper-name.js';
-import { type XmpSchema, xmpBag } from '../xmp-schema.js';
+import type { XmpSchema } from '../xmp-schema.js';
 
 /**
  * XMP Namespace
@@ -30,7 +31,7 @@ export const xmpSchema: XmpSchema = {
 		 * @deprecated see XMP specification!
 		 */
 		Advisory: {
-			valueType: xmpBag(xmpText),
+			valueType: rdfBag(xmpText),
 		},
 
 		/**
@@ -69,7 +70,7 @@ export const xmpSchema: XmpSchema = {
 		 * to an array would break compatibility with existing XMP processors.
 		 */
 		Identifier: {
-			valueType: xmpBag(xmpProperName),
+			valueType: rdfBag(xmpProperName),
 		},
 
 		/**

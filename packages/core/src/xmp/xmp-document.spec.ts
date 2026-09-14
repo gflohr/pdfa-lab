@@ -134,13 +134,14 @@ describe('XMP document', () => {
 			expect(xmp).toMatchSnapshot();
 		});
 
-		it.skip('should set language alternatives', () => {
+		it('should set language alternatives', () => {
 			const xmpDoc = new XmpDocument();
 
 			const title = 'Internet For Dummies, Remedial Edition';
 			xmpDoc.setMetaInfo('dc:title', title);
 
 			const xmp = xmpDoc.serialiseXmp();
+console.log(xmp);
 
 			expect(xmp).toContain(`<rdf:li xml:lang="x-default">${title}</rdf:li>`);
 			expect(xmp).toMatchSnapshot();
@@ -416,8 +417,6 @@ describe('XMP document', () => {
 	describe('Nested schemas', () => {
 		it.skip('should create nested data', () => {
 			const xmpDoc = new XmpDocument();
-
-			xmpDoc.tryOut();
 		});
 	});
 });

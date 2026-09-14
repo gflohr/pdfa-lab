@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { type XmpStruct, xmpLiteral } from '../../xmp-schema.js';
+import { type RdfStruct, rdfLiteral } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 
 /**
@@ -12,7 +12,7 @@ import { xmpText } from '../core/basic/text.js';
  * * Schema namespace URI: `http://www.aiim.org/pdfa/ns/field#`.
  * * Required schema namespace prefix: `pdfaField`.
  */
-export const pdfaField: XmpStruct = {
+export const pdfaField: RdfStruct = {
 	name: 'Field',
 	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/field#',
@@ -40,7 +40,7 @@ export const pdfaField: XmpStruct = {
 		 * Field names must be valid XML element names
 		 */
 		name: {
-			valueType: xmpLiteral(
+			valueType: rdfLiteral(
 				'name',
 				[v.regex(/^[A-Za-z_][A-Za-z0-9_.-]*$/)],
 				true,
@@ -60,7 +60,7 @@ export const pdfaField: XmpStruct = {
 		 * to the documentation of {@link pdfaValueType} can be used.
 		 */
 		valueType: {
-			valueType: xmpLiteral(
+			valueType: rdfLiteral(
 				'valueType',
 				[v.nonEmpty('Value type cannot be empty')],
 				true,

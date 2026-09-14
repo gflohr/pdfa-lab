@@ -1,4 +1,4 @@
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * A string representing a "**g**lobally **u**nique **i**dentifier”. A GUID
@@ -10,4 +10,4 @@ import { xmpLiteral } from '../../../xmp-schema.js';
  * them for equality. This comparison shall use the Unicode string value as-is,
  * using a direct byte-for-byte check for equality.
  */
-export const xmpGUID = xmpLiteral('GUID');
+export const xmpGUID = rdfLiteral('GUID');

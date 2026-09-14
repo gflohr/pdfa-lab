@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * Generates a closed {@link Choice}.
@@ -7,7 +7,7 @@ import { xmpLiteral } from '../../../xmp-schema.js';
 export function xmpClosedChoice(choices: string[]) {
 	const allowed = new Set(choices);
 
-	return xmpLiteral('Choice', [
+	return rdfLiteral('Choice', [
 		v.check(
 			(input) => typeof input === 'string' && allowed.has(input),
 			`Value must be one of: ${choices.map((c) => `'${c}'`).join(', ')}`,

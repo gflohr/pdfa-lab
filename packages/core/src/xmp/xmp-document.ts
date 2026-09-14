@@ -92,27 +92,14 @@ export interface XMPSetMetaInfoOptions {
 
 const bom = '\uFEFF';
 
+const NS_RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+const RDF = rdflib.Namespace(NS_RDF);
+
 /** @internal */
 export class XmpDocument {
 	/** @internal */
 	public static readonly NS_X = 'adobe:ns:meta/';
-
-	/** @internal */
-	private static readonly NS_RDF =
-		'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-
-	/** The Dublin Core namespace. Preferred prefix: `dc`. */
-	static readonly NS_DC = 'http://purl.org/dc/elements/1.1/';
-
-	/** The Adobe XMP Basic namespace. Preferred prefix: `xmp`. */
-	public static readonly NS_XMP = 'http://ns.adobe.com/xap/1.0/';
-
-	/** The XMP Media Management namespace. Preferred prefix: `xmpMM`. */
-	public static readonly NS_XMPMM = 'http://ns.adobe.com/xap/1.0/mm/';
-
-	/** The PDF/A Extension Schema Namespace. Preferred prefix: `pdfaExtension` */
-	public static readonly NS_PDFA_EXTENSION =
-		'http://www.aiim.org/pdfa/ns/extension/';
 
 	private doc: Document;
 	private kb = rdflib.graph();
@@ -168,10 +155,10 @@ export class XmpDocument {
 		this.registerNamespace('xmp', xmpSchema);
 		this.kb.setPrefixForURI('xmp', xmpSchema.namespaceURI);
 		this.registerNamespace('xmpMM', xmpMediaManagementSchema);
-		this.kb.setPrefixForURI('xmpMM', XmpDocument.NS_XMPMM);
+		this.kb.setPrefixForURI('xmpMM', xmpMediaManagementSchema.namespaceURI);
 
 		this.registerNamespace('pdfaExtension', pdfaExtensionSchema);
-		this.kb.setPrefixForURI('pdfaExtension', XmpDocument.NS_PDFA_EXTENSION);
+		this.kb.setPrefixForURI('pdfaExtension', pdfaExtensionSchema.namespaceURI);
 	}
 
 	private static createEmptyXmpMeta(): string {
@@ -250,7 +237,7 @@ ${output}</x:xmpmeta>
 					for (let i = 0; i < child.attributes.length; ++i) {
 						const attr = child.attributes.item(i);
 						if (attr?.name.startsWith('xmlns:') && attr.name.length > 6) {
-							if (attr.value === XmpDocument.NS_RDF) {
+							if (attr.value === NS_RDF) {
 								const prefix = attr.name.slice(6);
 								if (child.nodeName === `${prefix}:RDF`) {
 									return child;
@@ -263,7 +250,7 @@ ${output}</x:xmpmeta>
 		}
 
 		// Create and attach <rdf:RDF>
-		const newRdf = this.doc.createElementNS(XmpDocument.NS_RDF, 'rdf:RDF');
+		const newRdf = this.doc.createElementNS(NS_RDF, 'rdf:RDF');
 		xmpMeta.appendChild(newRdf);
 		return newRdf;
 	}
@@ -360,15 +347,15 @@ ${output}</x:xmpmeta>
 		if (node.termType === 'BlankNode' || node.termType === 'NamedNode') {
 			const typeValue = this.kb.anyValue(
 				node,
-				rdflib.sym(`${XmpDocument.NS_RDF}type`),
+				RDF('type'),
 			);
 
 			switch (typeValue) {
-				case `${XmpDocument.NS_RDF}Bag`:
-				case `${XmpDocument.NS_RDF}Seq`:
+				case `${NS_RDF}Bag`:
+				case `${NS_RDF}Seq`:
 					return this.getItemsFromList(node, rdfIndex);
 
-				case `${XmpDocument.NS_RDF}Alt`:
+				case `${NS_RDF}Alt`:
 					return this.getLanguageAlternative(node, lang);
 
 				default:
@@ -483,10 +470,10 @@ ${output}</x:xmpmeta>
 
 		const typeValue = this.kb.anyValue(
 			node,
-			rdflib.sym(`${XmpDocument.NS_RDF}type`),
+			RDF('type'),
 		);
 
-		if (typeValue !== `${XmpDocument.NS_RDF}Alt`) {
+		if (typeValue !== `${NS_RDF}Alt`) {
 			return null;
 		}
 
@@ -523,14 +510,14 @@ ${output}</x:xmpmeta>
 		if (rdfIndex) {
 			const itemNode = this.kb.any(
 				container,
-				rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`),
+				RDF(`_${rdfIndex}`),
 			);
 
 			return itemNode?.value ?? null;
 		}
 
 		// Get all values.
-		const RDF_LI_PREFIX = `${XmpDocument.NS_RDF}_`;
+		const RDF_LI_PREFIX = `${NS_RDF}_`;
 
 		// Extract items, parse their numeric index, sort by index, and map to values
 		return this.kb
@@ -594,6 +581,11 @@ ${output}</x:xmpmeta>
 			} else {
 				this.setIndexedListItem(container, token.index, value, options);
 			}
+		} else if (termType === 'Lang Alt') {
+			const node = rdflib.sym(`${namespaceUri}${token.name}`);
+			const container = this.getContainer(subject, node, token.name, 'Alt');
+
+			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
 			this.setLiteralMetaInfo(subject, predicate, value, options);
 		}
@@ -623,19 +615,30 @@ ${output}</x:xmpmeta>
 		name: string,
 		listType: 'Bag' | 'Seq' | 'Alt',
 	): rdflib.NamedNode | rdflib.BlankNode {
+		const targetContainerType = RDF(listType);
+
 		let container = this.kb.any(subject, node, null) as
 			| rdflib.NamedNode
 			| rdflib.BlankNode
 			| null;
 
-		if (container) return container;
+		if (container) {
+			const currentType = this.kb.any(container, RDF('type'), null);
+
+			// Verify or repair the container type if mismatched.
+			if (!currentType?.equals(targetContainerType)) {
+				if (currentType) {
+					this.kb.removeMany(container, RDF('type'), null);
+				}
+				this.kb.add(container, RDF('type'), targetContainerType);
+			}
+			return container;
+		}
 
 		container = rdflib.blankNode(name);
-		this.kb.add(
-			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}type`),
-			rdflib.sym(`${XmpDocument.NS_RDF}${listType}`),
-		);
+
+		// Adding explicit RDF type using rdflib's RDF namespace.
+		this.kb.add(container, RDF('type'), targetContainerType);
 		this.kb.add(subject, node, container);
 
 		return container;
@@ -674,7 +677,7 @@ ${output}</x:xmpmeta>
 		const rdfIndex = highest + 2;
 		this.kb.add(
 			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`),
+			RDF(`_${rdfIndex}`),
 			rdflib.literal(value),
 		);
 	}
@@ -691,7 +694,7 @@ ${output}</x:xmpmeta>
 			throw new RangeError(`Index '${rdfIndex}' out of range!`);
 		}
 
-		const predicate = rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`);
+		const predicate = RDF(`_${rdfIndex}`);
 
 		if (rdfIndex <= highest) {
 			if (options.noOverwrite) {
@@ -763,7 +766,7 @@ ${output}</x:xmpmeta>
 
 		this.kb.add(
 			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`),
+			rdflib.sym(`${NS_RDF}_${rdfIndex}`),
 			rdflib.literal(value, lang),
 		);
 	}
@@ -771,8 +774,8 @@ ${output}</x:xmpmeta>
 	private clearContainerItems(
 		container: rdflib.NamedNode | rdflib.BlankNode,
 	): void {
-		const RDF_LI_PREFIX = `${XmpDocument.NS_RDF}_`;
-		const RDF_LI = `${XmpDocument.NS_RDF}li`;
+		const RDF_LI_PREFIX = `${NS_RDF}_`;
+		const RDF_LI = `${NS_RDF}li`;
 
 		// Find all triples where container is the subject and predicate is an item index
 		const itemStatements = this.kb
@@ -818,25 +821,5 @@ ${output}</x:xmpmeta>
 		}
 
 		return statements;
-	}
-
-	public tryOut() {
-		const root = rdflib.sym(this.baseIRI);
-		const schemasPredicate = rdflib.sym(
-			`${XmpDocument.NS_PDFA_EXTENSION}schemas`,
-		);
-		const rdfType = rdflib.sym(`${XmpDocument.NS_RDF}type`);
-		const rdfBag = rdflib.sym(`${XmpDocument.NS_RDF}Bag`);
-
-		const existing = this.kb.any(root, schemasPredicate);
-		if (existing) {
-			return;
-		}
-
-		const containerNode = this.kb.bnode();
-		this.kb.add(root, schemasPredicate, containerNode);
-		this.kb.add(containerNode, rdfType, rdfBag);
-
-		console.log(this.serialiseXmp());
 	}
 }

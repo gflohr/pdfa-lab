@@ -1,3 +1,4 @@
+import { rdfBag, rdfSeq } from '../../rdf/rdf-schema.js';
 import { xmpInteger } from '../value-types/core/basic/integer.js';
 import { xmpText } from '../value-types/core/basic/text.js';
 import { xmpAgentName } from '../value-types/core/derived/agent-name.js';
@@ -9,7 +10,7 @@ import { xmpResourceRef } from '../value-types/core/derived/resource-ref.js';
 import { xmpURI } from '../value-types/core/derived/uri.js';
 import { xmpURL } from '../value-types/core/derived/url.js';
 import { xmpVersion } from '../value-types/core/derived/version.js';
-import { type XmpSchema, xmpBag, xmpSeq } from '../xmp-schema.js';
+import type { XmpSchema } from '../xmp-schema.js';
 
 /**
  * The XMP Media Management namespace
@@ -67,7 +68,7 @@ export const xmpMediaManagementSchema: XmpSchema = {
 		 * management, as well as for workflow enhancement.
 		 */
 		History: {
-			valueType: xmpSeq(xmpResourceEvent),
+			valueType: rdfSeq(xmpResourceEvent),
 		},
 
 		/**
@@ -77,7 +78,7 @@ export const xmpMediaManagementSchema: XmpSchema = {
 		 * reference, into this resource.
 		 */
 		Ingredients: {
-			valueType: xmpBag(xmpResourceRef),
+			valueType: rdfBag(xmpResourceRef),
 		},
 
 		/**
@@ -99,7 +100,7 @@ export const xmpMediaManagementSchema: XmpSchema = {
 		 * different management systems.
 		 */
 		ManagedFrom: {
-			valueType: xmpBag(xmpResourceRef),
+			valueType: rdfBag(xmpResourceRef),
 		},
 
 		/**
@@ -223,7 +224,7 @@ export const xmpMediaManagementSchema: XmpSchema = {
 		 * history can be truncated at some point.
 		 */
 		Versions: {
-			valueType: xmpSeq(xmpVersion),
+			valueType: rdfSeq(xmpVersion),
 		},
 
 		/**

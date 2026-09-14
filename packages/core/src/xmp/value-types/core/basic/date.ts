@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 const dateRegex =
 	/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01])(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?)?)?)?$/;
@@ -59,7 +59,7 @@ function isValidCalendarDate(input: string): boolean {
  * NOTE : If a file was saved at noon on October 23, a timestamp of
  * 2004-10-23T12:00:00-06:00 conveys more information than 2004-10-23T18:00:00Z.
  */
-export const xmpDate = xmpLiteral('Date', [
+export const xmpDate = rdfLiteral('Date', [
 	v.regex(dateRegex, 'Invalid XMP date format'),
 	v.check(isValidCalendarDate, 'Invalid calendar date'),
 ]);

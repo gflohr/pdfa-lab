@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { xmpLiteral } from '../../../xmp-schema.js';
+import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
  * A simple text Open Choice value denoting the form or intended usage of a
@@ -23,7 +23,7 @@ import { xmpLiteral } from '../../../xmp-schema.js';
  * |             | EXAMPLE:                                                   |
  * |             | `thumbnail:jpeg, thumbnail:16x16, thumbnail:gif:8x8:bw`    |
  */
-export const xmpRenditionClass = xmpLiteral('RenditionClass', [
+export const xmpRenditionClass = rdfLiteral('RenditionClass', [
 	v.regex(
 		/^(?:default|(?!default:)[^:\s]+(?::[^:\s]+)*)$/,
 		'Invalid XMP RenditionClass: must be "default" or a colon-separated series of tokens',

@@ -1,4 +1,4 @@
-import type { XmpStruct } from '../../../xmp-schema.js';
+import type { RdfStruct } from '../../../../rdf/rdf-schema.js';
 import { xmpDate } from '../basic/date.js';
 import { xmpText } from '../basic/text.js';
 import { xmpProperName } from './proper-name.js';
@@ -12,7 +12,7 @@ import { xmpResourceEvent } from './resource-event.js';
  * * The field namespace URI is `http://ns.adobe.com/xap/1.0/sType/Version#`.
  * * The preferred field namespace prefix is `stVer`.
  */
-export const xmpVersion: XmpStruct = {
+export const xmpVersion: RdfStruct = {
 	name: 'Version',
 	description: 'Describes one version of a document.',
 	termType: 'Struct',

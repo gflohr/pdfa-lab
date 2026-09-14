@@ -1,4 +1,4 @@
-import { type XmpStruct, xmpBag } from '../../../xmp-schema.js';
+import { type RdfStruct, rdfBag } from '../../../../rdf/rdf-schema.js';
 import { xmpDate } from '../basic/date.js';
 import { xmpText } from '../basic/text.js';
 import { xmpAgentName } from './agent-name.js';
@@ -20,7 +20,7 @@ import { xmpURI } from './uri.js';
  * * The field namespace URI is http://ns.adobe.com/xap/1.0/sType/ResourceRef#
  * * The preferred field namespace prefix is `stRef`
  */
-export const xmpResourceRef: XmpStruct = {
+export const xmpResourceRef: RdfStruct = {
 	name: 'ResourceRef',
 	description:
 		'A structure denoting a multiple-component reference to a resource. The field values are taken from various properties in the referenced resource.',
@@ -35,7 +35,7 @@ export const xmpResourceRef: XmpStruct = {
 		 * order is the recommended order in attempting to locate the resource.
 		 */
 		alternatePaths: {
-			valueType: xmpBag(xmpURI),
+			valueType: rdfBag(xmpURI),
 		},
 
 		/**

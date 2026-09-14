@@ -1,4 +1,4 @@
-import type * as v from 'valibot';
+import type { RdfProperty } from '../rdf/rdf-schema.js';
 import { xmpDimensions } from './value-types/complex/dimensions.js';
 import { xmpBoolean } from './value-types/core/basic/boolean.js';
 import { xmpDate } from './value-types/core/basic/date.js';
@@ -15,115 +15,6 @@ import { xmpRenditionClass } from './value-types/core/derived/rendition-class.js
 import { xmpResourceRef } from './value-types/core/derived/resource-ref.js';
 import { xmpURI } from './value-types/core/derived/uri.js';
 import { xmpURL } from './value-types/core/derived/url.js';
-
-export interface XmpBaseValueType {
-	termType: string;
-
-	/**
-	 * Description. Verbose description of the type. Defaults to its name.
-	 */
-	description?: string;
-
-	/**
-	 * Valibot validation actions like v.regex() or v.minLength().
-	 */
-	validationActions?: v.GenericPipeAction[];
-
-	/**
-	 * If false, the validationActions are only checked in strict mode.
-	 * Default `false`.
-	 */
-	strict?: boolean;
-}
-
-export interface XmpLiteral extends XmpBaseValueType {
-	termType: 'Literal';
-
-	/**
-	 * The name of the value type.
-	 */
-	name: string;
-}
-
-/**
- * Factory function for {@link XmpLiteral}.
- *
- * @param name the name like 'Text', 'Date', etc.
- * @param validationActions possible validation actions
- * @param strict enforce validation actions
- * @param internal if internal or external
- * @returns
- */
-export function xmpLiteral(
-	name: string,
-	validationActions?: v.GenericPipeAction[],
-	strict?: boolean,
-): XmpLiteral {
-	return {
-		name,
-		termType: 'Literal',
-		validationActions,
-		strict,
-	};
-}
-
-export interface XmpStruct extends XmpBaseValueType {
-	name: string;
-
-	termType: 'Struct';
-
-	namespaceURI: string;
-
-	prefix: string;
-
-	/** Fields contained inside this structured custom type. */
-	properties: Record<string, XmpProperty>;
-}
-
-export interface XmpBag<T = XmpValueType> extends XmpBaseValueType {
-	termType: 'Bag';
-
-	itemType: T;
-}
-
-export function xmpBag<T extends XmpValueType>(itemType: T): XmpBag<T> {
-	return {
-		termType: 'Bag',
-
-		itemType,
-	};
-}
-
-export interface XmpSeq<T = XmpValueType> extends XmpBaseValueType {
-	termType: 'Seq';
-
-	itemType: T;
-}
-
-export function xmpSeq<T extends XmpValueType>(itemType: T): XmpSeq<T> {
-	return {
-		termType: 'Seq',
-		itemType,
-	};
-}
-export interface XmpAlt<T = XmpValueType> extends XmpBaseValueType {
-	termType: 'Alt';
-	itemType: T;
-}
-export function xmpAlt<T extends XmpValueType>(itemType: T): XmpAlt<T> {
-	return {
-		termType: 'Alt',
-		itemType,
-	};
-}
-
-export function xmpLangAlt<T extends XmpValueType = XmpValueType>(itemType: T) {
-	// FIXME! We need the xml:lang attribute!
-	return xmpAlt<T>(itemType);
-}
-
-export type XmpList<T extends XmpValueType> = XmpBag<T> | XmpSeq<T> | XmpAlt<T>;
-export type XmpValueType = XmpLiteral | XmpStruct | XmpBag | XmpSeq | XmpAlt;
 
 export const xmpCoreBaseTypes = {
 	boolean: xmpBoolean,
@@ -164,26 +55,9 @@ export type XmpCoreType = XmpCoreBaseType | XmpCoreDerivedType;
 
 export type XmpPredefinedType = XmpCoreType | XmpComplexType;
 
-export interface XmpProperty {
-	description?: string;
-
-	valueType: XmpValueType;
-
-	/*
-	 * Does the property have to be present? Default: `false`.
-	 */
-	required?: boolean;
-
-	/**
-	 * The opposite of external. Default: `false`. That means that properties
-	 * are by default external.
-	 */
-	internal?: boolean;
-}
-
 export interface XmpSchema {
 	name: string;
 	namespaceURI: string;
 	prefix: string;
-	properties: Record<string, XmpProperty>;
+	properties: Record<string, RdfProperty>;
 }

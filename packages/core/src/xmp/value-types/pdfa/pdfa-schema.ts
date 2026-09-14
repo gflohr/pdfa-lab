@@ -1,4 +1,8 @@
-import { type XmpLiteral, type XmpStruct, xmpSeq } from '../../xmp-schema.js';
+import {
+	type RdfLiteral,
+	type RdfStruct,
+	rdfSeq,
+} from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpURI } from '../core/derived/uri.js';
 
@@ -11,7 +15,7 @@ import { xmpURI } from '../core/derived/uri.js';
  * Schema namespace URI: `http://www.aiim.org/pdfa/ns/schema#`.
  * Required schema namespace prefix: `pdfaSchema`.
  */
-export const pdfaSchema: XmpStruct = {
+export const pdfaSchema: RdfStruct = {
 	name: 'Schema',
 	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/schema#',
@@ -41,7 +45,7 @@ export const pdfaSchema: XmpStruct = {
 		},
 
 		/**
-		 * Type: {@link xmpSeq} of {@link pdfaPropertySchema}
+		 * Type: {@link rdfSeq} of {@link pdfaPropertySchema}
 		 *
 		 * Preferred schema namespace prefix.
 		 *
@@ -50,8 +54,8 @@ export const pdfaSchema: XmpStruct = {
 		 */
 		property: {
 			// FIXME! This must be a pdfaPropertySchema!
-			//valueType: xmpSeq(pdfaPropertySchema),
-			valueType: xmpSeq<XmpLiteral>(xmpText),
+			//valueType: rdfSeq(pdfaPropertySchema),
+			valueType: rdfSeq<RdfLiteral>(xmpText),
 		},
 
 		/**
@@ -67,7 +71,7 @@ export const pdfaSchema: XmpStruct = {
 		},
 
 		/**
-		 * Type: {@link xmpSeq} of {@link pdfaValueType}
+		 * Type: {@link rdfSeq} of {@link pdfaValueType}
 		 *
 		 * This property is required! The validation is strict!
 		 *
@@ -78,7 +82,7 @@ export const pdfaSchema: XmpStruct = {
 		valueType: {
 			// FIXME! Must be a pdfaValueType. Solution: Everything but
 			// pdfaExtension must be a value type, not a schema!
-			valueType: xmpSeq<XmpLiteral>(xmpText),
+			valueType: rdfSeq<RdfLiteral>(xmpText),
 		},
 	},
 };

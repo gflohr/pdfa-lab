@@ -1,9 +1,10 @@
+import { rdfBag, rdfLangAlt, rdfSeq } from '../../rdf/rdf-schema.js';
 import { xmpDate } from '../value-types/core/basic/date.js';
 import { xmpText } from '../value-types/core/basic/text.js';
 import { xmpLocale } from '../value-types/core/derived/locale.js';
 import { xmpMIMEType } from '../value-types/core/derived/mime-type.js';
 import { xmpProperName } from '../value-types/core/derived/proper-name.js';
-import { type XmpSchema, xmpBag, xmpLangAlt, xmpSeq } from '../xmp-schema.js';
+import type { XmpSchema } from '../xmp-schema.js';
 
 /**
  * Dublin Core namespace.
@@ -54,7 +55,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * include those listed in dc:creator.
 		 */
 		contributor: {
-			valueType: xmpBag(xmpProperName),
+			valueType: rdfBag(xmpProperName),
 		},
 
 		/**
@@ -80,7 +81,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * if such order is significant.
 		 */
 		creator: {
-			valueType: xmpSeq(xmpProperName),
+			valueType: rdfSeq(xmpProperName),
 		},
 		/**
 		 * Type: Ordered array of ({@link xmpDate}).
@@ -89,7 +90,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * in the life cycle of the resource.
 		 */
 		date: {
-			valueType: xmpSeq(xmpDate),
+			valueType: rdfSeq(xmpDate),
 		},
 
 		/**
@@ -100,7 +101,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * given in various languages.
 		 */
 		description: {
-			valueType: xmpLangAlt(xmpText),
+			valueType: rdfLangAlt(),
 		},
 
 		/**
@@ -136,7 +137,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * usage is a list of languages used in the content of the resource.
 		 */
 		language: {
-			valueType: xmpBag(xmpLocale),
+			valueType: rdfBag(xmpLocale),
 		},
 
 		/**
@@ -149,7 +150,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * publishers.
 		 */
 		publisher: {
-			valueType: xmpBag(xmpProperName),
+			valueType: rdfBag(xmpProperName),
 		},
 
 		/**
@@ -161,7 +162,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * usage is a list of related resources.
 		 */
 		relation: {
-			valueType: xmpBag(xmpText),
+			valueType: rdfBag(xmpText),
 		},
 
 		/**
@@ -174,7 +175,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * list of informal rights statements, given in various languages.
 		 */
 		rights: {
-			valueType: xmpLangAlt(xmpText),
+			valueType: rdfLangAlt(),
 		},
 
 		/**
@@ -202,7 +203,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * resource.
 		 */
 		subject: {
-			valueType: xmpBag(xmpText),
+			valueType: rdfBag(xmpText),
 		},
 
 		/**
@@ -214,7 +215,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * languages.
 		 */
 		title: {
-			valueType: xmpLangAlt(xmpText),
+			valueType: rdfLangAlt(),
 		},
 
 		/**
@@ -228,7 +229,7 @@ export const dublinCoreSchema: XmpSchema = {
 		 * clarification of the XMP usage of that element.
 		 */
 		type: {
-			valueType: xmpBag(xmpText),
+			valueType: rdfBag(xmpText),
 		},
 	},
 };
