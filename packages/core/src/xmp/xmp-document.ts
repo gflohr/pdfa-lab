@@ -214,6 +214,7 @@ export class XmpDocument {
 			throw new Error(`Invalid output format '${format}'!`);
 		}
 
+		// Workaround for https://github.com/linkeddata/rdflib.js/issues/869.
 		if (format === 'application/rdf+xml') {
 			return output.replace(
 				/<([^>\s]+)\s+rdf:parseType="Resource">(\s*<(?:rdf:Alt|rdf:Bag|rdf:Seq)[\s>])/g,
@@ -815,5 +816,36 @@ ${output}</x:xmpmeta>
 		}
 
 		return statements;
+	}
+
+	public getStructure(prefix: string, name: string): rdflib.BlankNode {
+		const subject = rdflib.sym(this.baseIRI);
+		const schema = this.schemas[prefix];
+		if (!schema) {
+			throw new Error(`No schema registered for prefix '${prefix}'.`);
+		}
+
+		const predicate = rdflib.sym(`${schema.namespaceURI}${name}`);
+		const existing = this.kb.any(subject, predicate, null);
+
+		// 1. Reuse existing blank/named node and strip any container rdf:type (Alt/Bag/Seq)
+		if (
+			existing &&
+			(existing.termType === 'BlankNode' || existing.termType === 'NamedNode')
+		) {
+			this.kb.removeMany(existing as rdflib.NamedNode, RDF('type'), null);
+			return existing as rdflib.BlankNode;
+		}
+
+		// 2. Clear out any previous value if it was a literal
+		if (existing) {
+			this.kb.removeMany(subject, predicate, null);
+		}
+
+		// 3. Create new blank node and attach it to the root subject
+		const structNode = rdflib.blankNode();
+		this.kb.add(subject, predicate, structNode);
+
+		return structNode;
 	}
 }

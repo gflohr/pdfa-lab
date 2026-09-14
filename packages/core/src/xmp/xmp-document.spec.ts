@@ -415,6 +415,12 @@ describe('XMP document', () => {
 
 	describe('Nested schemas', () => {
 		it.skip('should create nested data', () => {
+			const xmpDoc = new XmpDocument();
+
+			xmpDoc.setMetaInfo('xmpMM:DerivedFrom/stRef:documentID', 'abc-def-ghi-xyz');
+
+			const xmp = xmpDoc.serialiseXmp();
+			console.log(xmp);
 		});
 	});
 });
