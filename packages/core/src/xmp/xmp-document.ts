@@ -16,7 +16,7 @@ import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
 import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
-import { parsePath } from './util/parse-path.js';
+import { parsePath, PathToken } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
 
 /**
@@ -578,6 +578,42 @@ ${output}</x:xmpmeta>
 			throw new Error('Path must not be empty!');
 		}
 
+		const [subject, property] = this.autoVivifyPath(tokens);
+
+		// This is the leaf, which must be a literal.
+		const token = tokens[tokens.length - 1]!;
+
+		const namespaceURI = this.namespaces[token.prefix]!;
+
+		const predicate = rdflib.sym(`${namespaceURI}${token.name}`);
+
+		const termType = property.valueType.termType;
+
+		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
+			const container = this.getContainer(subject, node, token.name, termType);
+
+			if (!token.indices) {
+				this.setListItem(container, value, options);
+			} else  {
+				let rdfIndex = token.indices[token.indices.length - 1]!;
+				if (rdfIndex === '') {
+					const existing = this.getListItemIndices(container);
+					rdfIndex = existing.length + 1;
+				}
+				this.setIndexedListItem(container, rdfIndex, value, options);
+			}
+		} else if (termType === 'Lang Alt') {
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
+			const container = this.getContainer(subject, node, token.name, 'Alt');
+
+			this.setLanguageAlternative(container, value, token.lang, options);
+		} else {
+			this.setLiteralMetaInfo(subject, predicate, value, options);
+		}
+	}
+
+	private autoVivifyPath(tokens: PathToken[]): [rdflib.BlankNode | rdflib.NamedNode, RdfProperty] {
 		const firstToken = tokens[0]!;
 
 		const schema = this.schemas[firstToken.prefix];
@@ -623,37 +659,7 @@ ${output}</x:xmpmeta>
 			}
 		}
 
-		// This is the leaf, which must be a literal.
-		const token = tokens[tokens.length - 1]!;
-
-		const namespaceURI = this.namespaces[token.prefix]!;
-
-		const predicate = rdflib.sym(`${namespaceURI}${token.name}`);
-
-		const termType = property.valueType.termType;
-
-		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
-			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, termType);
-
-			if (!token.indices) {
-				this.setListItem(container, value, options);
-			} else  {
-				let rdfIndex = token.indices[token.indices.length - 1]!;
-				if (rdfIndex === '') {
-					const existing = this.getListItemIndices(container);
-					rdfIndex = existing.length + 1;
-				}
-				this.setIndexedListItem(container, rdfIndex, value, options);
-			}
-		} else if (termType === 'Lang Alt') {
-			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, 'Alt');
-
-			this.setLanguageAlternative(container, value, token.lang, options);
-		} else {
-			this.setLiteralMetaInfo(subject, predicate, value, options);
-		}
+		return [subject, property];
 	}
 
 	private setLiteralMetaInfo(
