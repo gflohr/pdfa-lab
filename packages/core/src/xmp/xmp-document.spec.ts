@@ -21,97 +21,98 @@ const defaultPacket = `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
 
 describe('XMP document', () => {
 	describe('serialise XMP', () => {
-		it('should create a fresh XMP document', () => {
+		it('should create a fresh XMP document', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/fresh.xml');
 		});
 
-		it('should accept an existing XMP document', () => {
+		it('should accept an existing XMP document', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialiseXmp();
 
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.xml');
 		});
 	});
 
 	describe('Serialisation Formats', () => {
-		it('should serialise to application/rdf+xml', () => {
+		it('should serialise to application/rdf+xml', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('application/rdf+xml');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default-xmp.xml');
 		});
 
-		it('should serialise to text/turtle', () => {
+		it('should serialise to text/turtle', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('text/turtle');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.turtle');
 		});
 
-		it('should serialise to applidation/n-triples', () => {
+		it('should serialise to applidation/n-triples', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('application/n-triples');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.n-tripes');
 		});
 
-		it('should serialise to applidation/ld+json', () => {
+		it('should serialise to applidation/ld+json', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('application/ld+json');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.json');
 		});
 
-		it('should serialise to text/n3', () => {
+		it('should serialise to text/n3', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('text/n3');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.n3');
 		});
 
-		it('should serialise to application/nquads', () => {
+		it('should serialise to application/nquads', async () => {
 			const xmpDoc = new XmpDocument(defaultPacket);
 
 			const xmp = xmpDoc.serialise('application/nquads');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/default.nquads');
 		});
 	});
 
 	describe('setMetaInfo', () => {
-		it('should add a new property to a fresh document', () => {
+		it('should add a new property to a fresh document', async () => {
 			const xmpDoc = new XmpDocument();
 			xmpDoc.setMetaInfo('dc:format', 'text/plain');
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<dc:format>text/plain</dc:format>');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-format.xml');
 		});
 
-		it('should honour the `noOverwrite` option', () => {
-			const xmpDoc = new XmpDocument(defaultPacket);
+		it('should honour the `noOverwrite` option', async () => {
+			const xmpDoc = new XmpDocument();
 			xmpDoc.setMetaInfo('dc:format', 'text/plain', { noOverwrite: true });
+			xmpDoc.setMetaInfo('dc:format', 'application/pdf', { noOverwrite: true });
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).not.toContain('<dc:format>text/plain</dc:format>');
-			expect(xmp).toMatchSnapshot();
+			expect(xmp).not.toContain('<dc:format>application/pdf</dc:format>');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-format.xml');
 		});
 
-		it('should set Seq items', () => {
+		it('should set Seq items', async () => {
 			const xmpDoc = new XmpDocument();
 
-			xmpDoc.setMetaInfo('dc:creator', 'John Doe');
+			xmpDoc.setMetaInfo('dc:creator', 'Jane Doe');
 
 			const xmp = xmpDoc.serialiseXmp();
 
-			expect(xmp).toContain('<rdf:Seq><rdf:li>John Doe</rdf:li></rdf:Seq>');
-			expect(xmp).toMatchSnapshot();
+			expect(xmp).toContain('<rdf:Seq><rdf:li>Jane Doe</rdf:li></rdf:Seq>');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/simple-seq.xml');
 		});
 
-		it('should overwrite Seq items by default', () => {
+		it('should overwrite Seq items by default', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:creator', 'John Doe');
@@ -120,10 +121,10 @@ describe('XMP document', () => {
 			const xmp = xmpDoc.serialiseXmp();
 
 			expect(xmp).toContain('<rdf:Seq><rdf:li>Jane Doe</rdf:li></rdf:Seq>');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/simple-seq.xml');
 		});
 
-		it('should append Seq items if requested', () => {
+		it('should append Seq items if requested', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:creator', 'John Doe');
@@ -134,10 +135,10 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				'<rdf:Seq><rdf:li>John Doe</rdf:li><rdf:li>Jane Doe</rdf:li></rdf:Seq>',
 			);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/2-item-seq.xml');
 		});
 
-		it('should set language alternatives', () => {
+		it('should set language alternatives', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const title = 'Internet For Dummies, Remedial Edition';
@@ -146,10 +147,10 @@ describe('XMP document', () => {
 			const xmp = xmpDoc.serialiseXmp();
 
 			expect(xmp).toContain(`<rdf:li xml:lang="x-default">${title}</rdf:li>`);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title.xml');
 		});
 
-		it.skip('should append localised language alternative values', () => {
+		it('should append localised language alternative values', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const title = 'Les Misérables';
@@ -162,10 +163,10 @@ describe('XMP document', () => {
 
 			expect(xmp).toContain(`<rdf:li xml:lang="x-default">${title}</rdf:li>`);
 			expect(xmp).toContain(`<rdf:li xml:lang="de">${titleDe}</rdf:li>`);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-localised.xml');
 		});
 
-		it.skip('should wipe out all other language alternatives, when setting the default', () => {
+		it('should wipe out all other language alternatives, when setting the default', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const oldTitleFr = 'Les Misérables';
@@ -183,10 +184,10 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="x-default">${newTitle}</rdf:li>`,
 			);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-wiped-out.xml');
 		});
 
-		it.skip('should honour the noOverwrite option, when setting the default', () => {
+		it('should honour the noOverwrite option, when setting the default', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const oldTitle = 'Les Misérables';
@@ -201,10 +202,10 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="x-default">${oldTitle}</rdf:li>`,
 			);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-new-default.xml');
 		});
 
-		it.skip('should overwrite language alternative values by default', () => {
+		it.skip('should overwrite language alternative values by default', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const title = 'Les Misérables';
@@ -222,10 +223,10 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="de">${fallbackTitleDe}</rdf:li>`,
 			);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-overwritten.xml');
 		});
 
-		it('should set individual indices', () => {
+		it('should set individual indices', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:subject[1]', 'one');
@@ -233,10 +234,10 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./dc-subject-one-two.xml');
 		});
 
-		it('should overwrite existing indices', () => {
+		it('should overwrite existing indices', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:subject[1]', 'one');
@@ -247,7 +248,7 @@ describe('XMP document', () => {
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).not.toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
 			expect(xmp).toContain('<rdf:li>yksi</rdf:li><rdf:li>kaksi</rdf:li>');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./dc-subject-yksi-kaksi.xml');
 		});
 
 		it('should not allow gaps', () => {
@@ -262,7 +263,7 @@ describe('XMP document', () => {
 			);
 		});
 
-		it('should append for empty indices', () => {
+		it('should append for empty indices', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:subject[]', 'one');
@@ -271,7 +272,7 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>');
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./dc-subject-one-two-three.xml');
 		});
 	});
 
@@ -390,7 +391,7 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot();
+			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
 		});
 
 		it('should accept and repair fdr as the rdf prefix', () => {
@@ -407,7 +408,7 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot();
+			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
 		});
 
 		it('should accept and repair cd as the Dublin Core prefix', () => {
@@ -424,7 +425,7 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot();
+			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
 		});
 	});
 
@@ -457,7 +458,7 @@ describe('XMP document', () => {
 	});
 
 	describe('Nested schemas', () => {
-		it('should create nested data', () => {
+		it('should create nested data', async () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo(
@@ -470,7 +471,7 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				'<stRef:documentID>abc-def-ghi-xyz</stRef:documentID>',
 			);
-			expect(xmp).toMatchSnapshot();
+			await expect(xmp).toMatchFileSnapshot('./snapshots/derived-from.xml');
 		});
 
 		it('should choke on literals as nodes', () => {

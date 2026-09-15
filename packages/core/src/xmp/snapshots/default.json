@@ -1,0 +1,10 @@
+{
+  "@context": {
+    "pdf": "http://ns.adobe.com/pdf/1.3/",
+    "dc": "http://purl.org/dc/elements/1.1/"
+  },
+  "@id": "urn:xmp:doc",
+  "pdf:PDFVersion": "1.7",
+  "pdf:Producer": "@pdfa-lab/core",
+  "dc:format": "application/pdf"
+}

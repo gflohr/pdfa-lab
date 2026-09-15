@@ -1,0 +1,8 @@
+@prefix : <#>.
+@prefix pdf: <http://ns.adobe.com/pdf/1.3/>.
+@prefix dc: <http://purl.org/dc/elements/1.1/>.
+
+<>
+    pdf:PDFVersion "1.7";
+    pdf:Producer "@pdfa-lab/core";
+    dc:format "application/pdf".
