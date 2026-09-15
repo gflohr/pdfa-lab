@@ -620,11 +620,7 @@ ${output}</x:xmpmeta>
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getLangAltContainer(
-				subject,
-				node,
-				token,
-			);
+			const container = this.getLangAltContainer(subject, node, token);
 
 			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {

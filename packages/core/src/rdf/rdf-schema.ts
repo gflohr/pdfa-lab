@@ -32,6 +32,7 @@ export interface RdfLiteral extends RdfBaseValueType {
 /**
  * Factory function for {@link RdfLiteral}.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export function rdfLiteral(
 	name: string,
 	validationActions?: v.GenericPipeAction[],
@@ -65,6 +66,7 @@ export interface RdfBag<T extends RdfValueType = RdfValueType>
 	itemType: T;
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 export function rdfBag<T extends RdfValueType>(itemType: T): RdfBag<T> {
 	return {
 		termType: 'Bag',
@@ -79,6 +81,7 @@ export interface RdfSeq<T extends RdfValueType = RdfValueType>
 	itemType: T;
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 export function rdfSeq<T extends RdfValueType>(itemType: T): RdfSeq<T> {
 	return {
 		termType: 'Seq',
@@ -93,6 +96,7 @@ export interface RdfAlt<T extends RdfValueType = RdfValueType>
 	itemType: T;
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 export function rdfAlt<T extends RdfValueType>(itemType: T): RdfAlt<T> {
 	return {
 		termType: 'Alt',
@@ -109,6 +113,7 @@ export interface RdfLangAlt extends RdfBaseValueType {
 	termType: 'Lang Alt';
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 export function rdfLangAlt(): RdfLangAlt {
 	return {
 		termType: 'Lang Alt',
