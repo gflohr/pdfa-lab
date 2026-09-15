@@ -163,7 +163,9 @@ describe('XMP document', () => {
 
 			expect(xmp).toContain(`<rdf:li xml:lang="x-default">${title}</rdf:li>`);
 			expect(xmp).toContain(`<rdf:li xml:lang="de">${titleDe}</rdf:li>`);
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-localised.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-title-localised.xml',
+			);
 		});
 
 		it('should wipe out all other language alternatives, when setting the default', async () => {
@@ -184,7 +186,9 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="x-default">${newTitle}</rdf:li>`,
 			);
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-wiped-out.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-title-wiped-out.xml',
+			);
 		});
 
 		it('should honour the noOverwrite option, when setting the default', async () => {
@@ -202,7 +206,9 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="x-default">${oldTitle}</rdf:li>`,
 			);
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-new-default.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-title-new-default.xml',
+			);
 		});
 
 		it('should overwrite language alternative values by default', async () => {
@@ -223,7 +229,9 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				`<rdf:li xml:lang="de">${fallbackTitleDe}</rdf:li>`,
 			);
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-overwritten.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-title-overwritten.xml',
+			);
 		});
 
 		it('should set individual indices', async () => {
@@ -234,7 +242,9 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-one-two.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-subject-one-two.xml',
+			);
 		});
 
 		it('should overwrite existing indices', async () => {
@@ -248,7 +258,9 @@ describe('XMP document', () => {
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).not.toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
 			expect(xmp).toContain('<rdf:li>yksi</rdf:li><rdf:li>kaksi</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-yksi-kaksi.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-subject-yksi-kaksi.xml',
+			);
 		});
 
 		it('should not allow gaps', () => {
@@ -271,8 +283,12 @@ describe('XMP document', () => {
 			xmpDoc.setMetaInfo('dc:subject[]', 'three');
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-one-two-three.xml');
+			expect(xmp).toContain(
+				'<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>',
+			);
+			await expect(xmp).toMatchFileSnapshot(
+				'./snapshots/dc-subject-one-two-three.xml',
+			);
 		});
 	});
 
@@ -440,17 +456,17 @@ describe('XMP document', () => {
 			},
 		};
 
-		it.skip('should set the inner literal', () => {
+		it('should set the inner literal', async () => {
 			const xmpDoc = new XmpDocument();
 			xmpDoc.registerNamespace('ex', schema);
 
-			console.dir(schema, { depth: null });
 			xmpDoc.setMetaInfo('ex:bagOfSeq[1][1]', 'findme');
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:Bag>');
 			expect(xmp).toContain('<rdf:Seq>');
 			expect(xmp).toContain('<rdf:li>findme</rdf:li>');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/bag-of-seq-1-1.xml');
 		});
 	});
 

@@ -8,16 +8,16 @@ import {
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
 import {
-	rdfLiteral,
 	type RdfProperty,
 	type RdfStruct,
 	type RdfValueType,
+	rdfLiteral,
 } from '../rdf/rdf-schema.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
 import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
-import { parsePath, PathToken } from './util/parse-path.js';
+import { type PathToken, parsePath } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
 
 /**
@@ -312,31 +312,43 @@ ${output}</x:xmpmeta>
 	private registerPropertyNamespaces(properties: Record<string, RdfProperty>) {
 		for (const name in properties) {
 			const property = properties[name]!;
+			const termType = property.valueType.termType;
 
-			if (property.valueType.termType !== 'Struct') {
-				continue;
+			if (termType === 'Struct') {
+				const vt = property.valueType;
+				this.registerStructNamespaces(vt);
+			} else if (termType === 'Bag' || termType === 'Seq') {
+				let itemType = property.valueType.itemType;
+				while (itemType.termType === 'Bag' || itemType.termType === 'Seq') {
+					itemType = itemType.itemType;
+				}
+
+				if (itemType.termType === 'Struct') {
+					this.registerStructNamespaces(itemType);
+				}
 			}
-
-			const valueType = property.valueType;
-			const prefix = valueType.prefix;
-			const namespaceURI = valueType.namespaceURI;
-
-			if (
-				typeof this.namespaces[prefix] !== 'undefined' &&
-				this.namespaces[prefix] !== namespaceURI
-			) {
-				throw new Error(
-					`Cannot register prefix '${prefix}'` +
-						` for namespace URI '${namespaceURI}': already registered` +
-						` for namespace URI '${this.namespaces[prefix]}'!`,
-				);
-			}
-
-			this.namespaces[prefix] = namespaceURI;
-			this.kb.setPrefixForURI(prefix, namespaceURI);
-
-			this.registerPropertyNamespaces(valueType.properties);
 		}
+	}
+
+	private registerStructNamespaces(valueType: RdfStruct) {
+		const prefix = valueType.prefix;
+		const namespaceURI = valueType.namespaceURI;
+
+		if (
+			typeof this.namespaces[prefix] !== 'undefined' &&
+			this.namespaces[prefix] !== namespaceURI
+		) {
+			throw new Error(
+				`Cannot register prefix '${prefix}'` +
+					` for namespace URI '${namespaceURI}': already registered` +
+					` for namespace URI '${this.namespaces[prefix]}'!`,
+			);
+		}
+
+		this.namespaces[prefix] = namespaceURI;
+		this.kb.setPrefixForURI(prefix, namespaceURI);
+
+		this.registerPropertyNamespaces(valueType.properties);
 	}
 
 	public getMetaInfo(path: string): string | string[] | null {
@@ -590,23 +602,29 @@ ${output}</x:xmpmeta>
 
 		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getContainer(subject, node, tokens, property);
+			const { container, index } = this.getContainer(
+				subject,
+				node,
+				token,
+				property,
+			);
 
-			if (!token.indices) {
+			// If no indices were given, we always overwrite all existing values.
+			if (!token.indices && !options.append) {
+				this.clearContainerItems(container);
 				this.setListItem(container, value, options);
-			} else  {
-				let rdfIndex = token.indices[token.indices.length - 1]!;
-				if (rdfIndex === '') {
-					const existing = this.getListItemIndices(container);
-					rdfIndex = existing.length + 1;
-				}
-				this.setIndexedListItem(container, rdfIndex, value, options);
+			} else if (!index) {
+				this.setListItem(container, value, options);
+			} else {
+				this.setIndexedListItem(container, index, value, options);
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const realProperty = structuredClone(property);
-			realProperty.valueType.termType = 'Alt';
-			const container = this.getContainer(subject, node, tokens, realProperty);
+			const container = this.getLangAltContainer(
+				subject,
+				node,
+				token,
+			);
 
 			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
@@ -614,7 +632,9 @@ ${output}</x:xmpmeta>
 		}
 	}
 
-	private autoVivifyPath(tokens: PathToken[]): [rdflib.BlankNode | rdflib.NamedNode, RdfProperty] {
+	private autoVivifyPath(
+		tokens: PathToken[],
+	): [rdflib.BlankNode | rdflib.NamedNode, RdfProperty] {
 		const firstToken = tokens[0]!;
 
 		const schema = this.schemas[firstToken.prefix];
@@ -656,7 +676,18 @@ ${output}</x:xmpmeta>
 				subject = this.getStructure(subject, token.prefix, token.name);
 				parent = property.valueType;
 			} else {
-				throw new Error('TODO!');
+				const namespaceURI = this.namespaces[token.prefix];
+				if (typeof namespaceURI === 'undefined') {
+					throw new Error(
+						`Schema registered for prefix` +
+							` '${firstToken.prefix}' has no property named` +
+							` '${firstToken.name}'!`,
+					);
+				}
+				const node = rdflib.sym(`${namespaceURI}${token.name}`);
+				const { container } = this.getContainer(subject, node, token, property);
+
+				subject = container;
 			}
 		}
 
@@ -679,42 +710,135 @@ ${output}</x:xmpmeta>
 		this.kb.add(subject, predicate, rdflib.literal(value));
 	}
 
+	private getLangAltContainer(
+		subject: rdflib.NamedNode | rdflib.BlankNode,
+		node: rdflib.NamedNode,
+		token: PathToken,
+	): rdflib.NamedNode | rdflib.BlankNode {
+		const targetContainerType = RDF('Alt');
+
+		let container = this.kb.any(subject, node, null) as
+			| rdflib.NamedNode
+			| rdflib.BlankNode
+			| null;
+		if (container) {
+			const currentTypeNode = this.kb.any(container, RDF('type'), null);
+			if (!currentTypeNode?.equals(targetContainerType)) {
+				if (currentTypeNode) {
+					this.kb.removeMany(container, RDF('type'), null);
+				}
+				this.kb.add(container, RDF('type'), targetContainerType);
+			}
+
+			return container;
+		}
+
+		container = rdflib.blankNode(token.name);
+		this.kb.add(container, RDF('type'), targetContainerType);
+		this.kb.add(subject, node, container);
+
+		return container;
+	}
+
 	private getContainer(
 		subject: rdflib.NamedNode | rdflib.BlankNode,
 		node: rdflib.NamedNode,
-		tokens: PathToken[],
+		token: PathToken,
 		property: RdfProperty,
-	): rdflib.NamedNode | rdflib.BlankNode {
-		const name = tokens[0]!.name;
-		const listType = property.valueType.termType;
+	): { container: rdflib.NamedNode | rdflib.BlankNode; index: number } {
+		let currentType: RdfValueType = property.valueType;
+		const targetContainerType = RDF(currentType.termType);
 
-		const targetContainerType = RDF(listType);
-
+		// 1. Get or auto-vivify the primary container on the subject.
 		let container = this.kb.any(subject, node, null) as
 			| rdflib.NamedNode
 			| rdflib.BlankNode
 			| null;
 
 		if (container) {
-			const currentType = this.kb.any(container, RDF('type'), null);
-
-			// Verify or repair the container type if mismatched.
-			if (!currentType?.equals(targetContainerType)) {
-				if (currentType) {
+			const currentTypeNode = this.kb.any(container, RDF('type'), null);
+			if (!currentTypeNode?.equals(targetContainerType)) {
+				if (currentTypeNode) {
 					this.kb.removeMany(container, RDF('type'), null);
 				}
 				this.kb.add(container, RDF('type'), targetContainerType);
 			}
-			return container;
+		} else {
+			container = rdflib.blankNode(token.name);
+			this.kb.add(container, RDF('type'), targetContainerType);
+			this.kb.add(subject, node, container);
 		}
 
-		container = rdflib.blankNode(name);
+		const indices = token.indices ?? [];
+		if (indices.length === 0) {
+			return { container, index: this.getNextIndex(container) };
+		}
 
-		// Adding explicit RDF type using rdflib's RDF namespace.
-		this.kb.add(container, RDF('type'), targetContainerType);
-		this.kb.add(subject, node, container);
+		// 2. Traverse / auto-vivify intermediate container levels (0 to N-2).
+		for (let i = 0; i < indices.length - 1; i++) {
+			const reqIndex = indices[i];
+			const resolvedIndex =
+				!reqIndex || reqIndex < 1 ? this.getNextIndex(container) : reqIndex;
 
-		return container;
+			const itemPredicate = RDF(`_${resolvedIndex}`);
+
+			if ('itemType' in currentType) {
+				currentType = (currentType as any).itemType;
+			} else {
+				throw new Error(
+					`Type '${currentType.termType}' cannot be indexed as a container.`,
+				);
+			}
+
+			let nextContainer = this.kb.any(container, itemPredicate, null) as
+				| rdflib.NamedNode
+				| rdflib.BlankNode
+				| null;
+
+			const nextContainerType = RDF(currentType.termType);
+
+			if (nextContainer) {
+				const existingType = this.kb.any(nextContainer, RDF('type'), null);
+				if (!existingType?.equals(nextContainerType)) {
+					if (existingType) {
+						this.kb.removeMany(nextContainer, RDF('type'), null);
+					}
+					this.kb.add(nextContainer, RDF('type'), nextContainerType);
+				}
+			} else {
+				nextContainer = rdflib.blankNode();
+				this.kb.add(nextContainer, RDF('type'), nextContainerType);
+				this.kb.add(container, itemPredicate, nextContainer);
+			}
+
+			container = nextContainer;
+		}
+
+		// 3. Resolve the target index inside the innermost container.
+		const lastReqIndex = indices[indices.length - 1];
+		const finalIndex =
+			!lastReqIndex || lastReqIndex < 1
+				? this.getNextIndex(container)
+				: lastReqIndex;
+
+		return { container, index: finalIndex };
+	}
+
+	private getNextIndex(container: rdflib.NamedNode | rdflib.BlankNode): number {
+		const statements = this.kb.statementsMatching(container, null, null);
+		let maxIndex = 0;
+		const prefix = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#_';
+
+		for (const stmt of statements) {
+			const uri = stmt.predicate.value;
+			if (uri.startsWith(prefix)) {
+				const idx = parseInt(uri.slice(prefix.length), 10);
+				if (!Number.isNaN(idx) && idx > maxIndex) {
+					maxIndex = idx;
+				}
+			}
+		}
+		return maxIndex + 1;
 	}
 
 	private getListItemIndices(

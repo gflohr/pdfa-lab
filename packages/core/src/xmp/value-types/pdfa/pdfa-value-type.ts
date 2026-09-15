@@ -20,7 +20,7 @@ import { xmpURI } from '../core/derived/uri.js';
  * * Schema namespace URI: http://www.aiim.org/pdfa/ns/type#
  * * Required schema namespace prefix: `pdfaType`
  */
-export const pdfaFieldSchema: RdfStruct = {
+export const pdfaValueType: RdfStruct = {
 	name: 'ValueType',
 	termType: 'Struct',
 	namespaceURI: 'http://www.aiim.org/pdfa/ns/type#',

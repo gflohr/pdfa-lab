@@ -5,6 +5,7 @@ import {
 } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpURI } from '../core/derived/uri.js';
+import { pdfaValueType } from './pdfa-value-type.js';
 
 /**
  * PDF/A Field namespace.
@@ -82,7 +83,7 @@ export const pdfaSchema: RdfStruct = {
 		valueType: {
 			// FIXME! Must be a pdfaValueType. Solution: Everything but
 			// pdfaExtension must be a value type, not a schema!
-			valueType: rdfSeq<RdfLiteral>(xmpText),
+			valueType: rdfSeq(pdfaValueType),
 		},
 	},
 };
