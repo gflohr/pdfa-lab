@@ -535,7 +535,7 @@ ${output}</x:xmpmeta>
 
 	private getItemsFromList(
 		container: rdflib.NamedNode | rdflib.BlankNode,
-		rdfIndex: number | '' | undefined,
+		rdfIndex?: number | '',
 	) {
 		if (rdfIndex) {
 			const itemNode = this.kb.any(container, RDF(`_${rdfIndex}`));
@@ -638,10 +638,13 @@ ${output}</x:xmpmeta>
 
 			if (!token.indices) {
 				this.setListItem(container, value, options);
-			} else if (!token.indices[0]) {
-				this.setListItem(container, value, options);
-			} else {
-				this.setIndexedListItem(container, token.indices[0], value, options);
+			} else  {
+				let rdfIndex = token.indices[token.indices.length - 1]!;
+				if (rdfIndex === '') {
+					const existing = this.getListItemIndices(container);
+					rdfIndex = existing.length + 1;
+				}
+				this.setIndexedListItem(container, rdfIndex, value, options);
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);

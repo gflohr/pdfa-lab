@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { rdfBag, rdfLiteral, rdfSeq } from '../rdf/rdf-schema.js';
 import { XmpDocument } from './xmp-document.js';
+import type { XmpSchema } from './xmp-schema.js';
 
 const bom = '\uFEFF';
 const defaultPacket = `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -259,6 +261,18 @@ describe('XMP document', () => {
 				"Index '3' out of range!",
 			);
 		});
+
+		it('should append for empty indices', () => {
+			const xmpDoc = new XmpDocument();
+
+			xmpDoc.setMetaInfo('dc:subject[]', 'one');
+			xmpDoc.setMetaInfo('dc:subject[2]', 'two');
+			xmpDoc.setMetaInfo('dc:subject[]', 'three');
+
+			const xmp = xmpDoc.serialiseXmp();
+			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>');
+			expect(xmp).toMatchSnapshot();
+		});
 	});
 
 	describe('getMetaInfo', () => {
@@ -410,6 +424,34 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
+			expect(xmp).toMatchSnapshot();
+		});
+	});
+
+	describe('Nested lists', () => {
+		const schema: XmpSchema = {
+			name: 'Example',
+			namespaceURI: 'http://example.org/example/',
+			prefix: 'ex',
+			properties: {
+				bagOfSeq: {
+					valueType: rdfBag(rdfSeq(rdfLiteral('inner'))),
+				},
+			},
+		};
+
+		it.skip('should set the inner literal', () => {
+			const xmpDoc = new XmpDocument();
+			xmpDoc.registerNamespace('ex', schema);
+
+			console.dir(schema, { depth: null });
+			xmpDoc.setMetaInfo('ex:bagOfSeq[1][1]', 'findme');
+
+			const xmp = xmpDoc.serialiseXmp();
+			expect(xmp).toContain('<rdf:Bag>');
+			expect(xmp).toContain('<rdf:Seq>');
+			expect(xmp).toContain('<rdf:li>findme</rdf:li>');
+
 			expect(xmp).toMatchSnapshot();
 		});
 	});

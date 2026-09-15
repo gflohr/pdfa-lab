@@ -1,5 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`XMP document > Nested lists > should set the inner literal 1`] = `
+"<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ex="http://example.org/example/">
+		<rdf:Description rdf:about="">
+			<ex:bagOfSeq>
+			   <rdf:Bag><rdf:li>findme</rdf:li></rdf:Bag>
+			</ex:bagOfSeq>
+		</rdf:Description>
+	</rdf:RDF></x:xmpmeta>
+<?xpacket end="w"?>"
+`;
+
 exports[`XMP document > Nested schemas > should create nested data 1`] = `
 "<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -148,6 +161,21 @@ exports[`XMP document > setMetaInfo > should append Seq items if requested 1`] =
 			<dc:creator>
 			   <rdf:Seq><rdf:li>John Doe</rdf:li><rdf:li>Jane Doe</rdf:li></rdf:Seq>
 			</dc:creator>
+		</rdf:Description>
+	</rdf:RDF></x:xmpmeta>
+<?xpacket end="w"?>"
+`;
+
+exports[`XMP document > setMetaInfo > should append for empty indices 1`] = `
+"<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+		<rdf:Description rdf:about="">
+			<dc:subject>
+				<rdf:Bag>
+				   <rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>
+				</rdf:Bag>
+			</dc:subject>
 		</rdf:Description>
 	</rdf:RDF></x:xmpmeta>
 <?xpacket end="w"?>"
