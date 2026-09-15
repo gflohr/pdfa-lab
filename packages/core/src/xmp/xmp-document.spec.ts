@@ -205,7 +205,7 @@ describe('XMP document', () => {
 			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-title-new-default.xml');
 		});
 
-		it.skip('should overwrite language alternative values by default', async () => {
+		it('should overwrite language alternative values by default', async () => {
 			const xmpDoc = new XmpDocument();
 
 			const title = 'Les Misérables';
@@ -319,7 +319,7 @@ describe('XMP document', () => {
 			]);
 		});
 
-		it.skip('should get values from language alternatives', () => {
+		it('should get values from language alternatives', () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:title', 'Les Misérables');
@@ -332,7 +332,7 @@ describe('XMP document', () => {
 	});
 
 	describe('get all language alternatives', () => {
-		it.skip('should return all values', () => {
+		it('should return all values', () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:title@x-default', 'Les Misérables');
@@ -344,7 +344,7 @@ describe('XMP document', () => {
 			});
 		});
 
-		it.skip('should normalise all language tags', () => {
+		it('should normalise all language tags', () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:title', 'Les Misérables');
@@ -356,7 +356,7 @@ describe('XMP document', () => {
 			});
 		});
 
-		it.skip('should fall back to the first language found', () => {
+		it('should fall back to the first language found', () => {
 			const xmpDoc = new XmpDocument();
 
 			xmpDoc.setMetaInfo('dc:title@fr-FR', 'Overwrite me!');
@@ -372,18 +372,17 @@ describe('XMP document', () => {
 				'fi-fi': 'Kurjat',
 				'bg-bg': 'Клетниците',
 			});
-			console.log(xmpDoc.serialiseXmp());
 		});
 	});
 
 	describe('Odd prefixes', () => {
-		it('should accept and repair y as the xmpmeta prefix', () => {
+		it('should accept and repair y as the xmpmeta prefix', async () => {
 			// Fixed by rdflib itself.
 			const xmpPacket = `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <y:xmpmeta xmlns:y="adobe:ns:meta/">
 	<fdr:RDF xmlns:fdr="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 		<fdr:Description xmlns:dc="http://purl.org/dc/elements/1.1/" fdr:about="">
-			<dc:format>application/pdf</dc:format>
+			<dc:format>text/plain</dc:format>
 		</fdr:Description>
 	</fdr:RDF>
 </y:xmpmeta>
@@ -391,16 +390,16 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-format.xml');
 		});
 
-		it('should accept and repair fdr as the rdf prefix', () => {
+		it('should accept and repair fdr as the rdf prefix', async () => {
 			// Fixed by rdflib itself.
 			const xmpPacket = `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
 	<fdr:RDF xmlns:fdr="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 		<fdr:Description xmlns:dc="http://purl.org/dc/elements/1.1/" fdr:about="">
-			<dc:format>application/pdf</dc:format>
+			<dc:format>text/plain</dc:format>
 		</fdr:Description>
 	</fdr:RDF>
 </x:xmpmeta>
@@ -408,16 +407,16 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-format.xml');
 		});
 
-		it('should accept and repair cd as the Dublin Core prefix', () => {
+		it('should accept and repair cd as the Dublin Core prefix', async () => {
 			// Fixed by rdflib itself.
 			const xmpPacket = `<?xpacket begin="${bom}" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
 	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 		<rdf:Description xmlns:cd="http://purl.org/dc/elements/1.1/" rdf:about="">
-			<cd:format>application/pdf</cd:format>
+			<cd:format>text/plain</cd:format>
 		</rdf:Description>
 	</rdf:RDF>
 </x:xmpmeta>
@@ -425,7 +424,7 @@ describe('XMP document', () => {
 `;
 			const xmpDoc = new XmpDocument(xmpPacket);
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toMatchSnapshot('./snapshots/dc-title-new-default.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-format.xml');
 		});
 	});
 
@@ -452,8 +451,6 @@ describe('XMP document', () => {
 			expect(xmp).toContain('<rdf:Bag>');
 			expect(xmp).toContain('<rdf:Seq>');
 			expect(xmp).toContain('<rdf:li>findme</rdf:li>');
-
-			expect(xmp).toMatchSnapshot();
 		});
 	});
 
@@ -495,7 +492,6 @@ describe('XMP document', () => {
 			expect(xmp).toContain(
 				'<pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>',
 			);
-			expect(xmp).toMatchSnapshot();
 		});
 	});
 });

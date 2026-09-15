@@ -584,9 +584,7 @@ ${output}</x:xmpmeta>
 		const token = tokens[tokens.length - 1]!;
 
 		const namespaceURI = this.namespaces[token.prefix]!;
-
 		const predicate = rdflib.sym(`${namespaceURI}${token.name}`);
-
 		const termType = property.valueType.termType;
 
 		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
