@@ -113,6 +113,22 @@ describe('XMP Path Parser', () => {
 		expect(parsePath(path)).toStrictEqual(wanted);
 	});
 
+	it('should allow negative indices', () => {
+		const path = '/xy:person[-1]/name';
+		const wanted: PathToken[] = [
+			{
+				prefix: 'xy',
+				name: 'person',
+				index: -1,
+			},
+			{
+				prefix: 'xy',
+				name: 'name',
+			}
+		];
+		expect(parsePath(path)).toStrictEqual(wanted);
+	});
+
 	it('should ignore empty path elements', () => {
 		const path = 'xy:foo//bar';
 		expect(parsePath(path)).toStrictEqual([

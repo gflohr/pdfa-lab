@@ -21,9 +21,9 @@ export function parsePath(path: string): PathToken[] {
 			part = part.substring(0, indexMatch.index);
 			if (!indexMatch[1]) {
 				index = '';
-			} else if (indexMatch[1].match(/^[0-9]+$/)) {
+			} else if (indexMatch[1].match(/^[-+]?[0-9]+$/)) {
 				index = parseInt(indexMatch[1], 10);
-				if (index <= 0) {
+				if (index === 0) {
 					throw new Error(
 						'XMP paths are 1-based, 0 is not allowed as an index!',
 					);
