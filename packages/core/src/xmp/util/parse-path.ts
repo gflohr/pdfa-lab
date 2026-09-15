@@ -4,7 +4,7 @@ export interface PathToken {
 	prefix: string;
 	name: string;
 	lang?: string;
-	index?: number;
+	index?: number | '';
 }
 
 /** @internal */
@@ -15,12 +15,12 @@ export function parsePath(path: string): PathToken[] {
 
 	let parentPrefix = '';
 	parts.forEach((part) => {
-		let index: number | undefined;
+		let index: number | '' | undefined;
 		const indexMatch = part.match(/\[(.*)\]/);
 		if (indexMatch) {
 			part = part.substring(0, indexMatch.index);
 			if (!indexMatch[1]) {
-				throw new Error("Empty index '[]' is not allowed!");
+				index = '';
 			} else if (indexMatch[1].match(/^[0-9]+$/)) {
 				index = parseInt(indexMatch[1], 10);
 				if (index <= 0) {
