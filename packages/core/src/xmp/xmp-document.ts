@@ -7,10 +7,11 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
-import type {
-	RdfProperty,
-	RdfStruct,
-	RdfValueType,
+import {
+	rdfLiteral,
+	type RdfProperty,
+	type RdfStruct,
+	type RdfValueType,
 } from '../rdf/rdf-schema.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
@@ -589,7 +590,7 @@ ${output}</x:xmpmeta>
 
 		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, termType);
+			const container = this.getContainer(subject, node, tokens, property);
 
 			if (!token.indices) {
 				this.setListItem(container, value, options);
@@ -603,7 +604,9 @@ ${output}</x:xmpmeta>
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, 'Alt');
+			const realProperty = structuredClone(property);
+			realProperty.valueType.termType = 'Alt';
+			const container = this.getContainer(subject, node, tokens, realProperty);
 
 			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
@@ -679,9 +682,12 @@ ${output}</x:xmpmeta>
 	private getContainer(
 		subject: rdflib.NamedNode | rdflib.BlankNode,
 		node: rdflib.NamedNode,
-		name: string,
-		listType: 'Bag' | 'Seq' | 'Alt',
+		tokens: PathToken[],
+		property: RdfProperty,
 	): rdflib.NamedNode | rdflib.BlankNode {
+		const name = tokens[0]!.name;
+		const listType = property.valueType.termType;
+
 		const targetContainerType = RDF(listType);
 
 		let container = this.kb.any(subject, node, null) as
