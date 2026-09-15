@@ -31,12 +31,6 @@ export interface RdfLiteral extends RdfBaseValueType {
 
 /**
  * Factory function for {@link RdfLiteral}.
- *
- * @param name the name like 'Text', 'Date', etc.
- * @param validationActions possible validation actions
- * @param strict enforce validation actions
- * @param internal if internal or external
- * @returns
  */
 export function rdfLiteral(
 	name: string,
@@ -64,7 +58,8 @@ export interface RdfStruct extends RdfBaseValueType {
 	properties: Record<string, RdfProperty>;
 }
 
-export interface RdfBag<T = RdfValueType> extends RdfBaseValueType {
+export interface RdfBag<T extends RdfValueType = RdfValueType>
+	extends RdfBaseValueType {
 	termType: 'Bag';
 
 	itemType: T;
@@ -73,12 +68,12 @@ export interface RdfBag<T = RdfValueType> extends RdfBaseValueType {
 export function rdfBag<T extends RdfValueType>(itemType: T): RdfBag<T> {
 	return {
 		termType: 'Bag',
-
 		itemType,
 	};
 }
 
-export interface RdfSeq<T = RdfValueType> extends RdfBaseValueType {
+export interface RdfSeq<T extends RdfValueType = RdfValueType>
+	extends RdfBaseValueType {
 	termType: 'Seq';
 
 	itemType: T;
@@ -91,10 +86,13 @@ export function rdfSeq<T extends RdfValueType>(itemType: T): RdfSeq<T> {
 	};
 }
 
-export interface RdfAlt<T = RdfValueType> extends RdfBaseValueType {
+export interface RdfAlt<T extends RdfValueType = RdfValueType>
+	extends RdfBaseValueType {
 	termType: 'Alt';
+
 	itemType: T;
 }
+
 export function rdfAlt<T extends RdfValueType>(itemType: T): RdfAlt<T> {
 	return {
 		termType: 'Alt',
@@ -103,7 +101,7 @@ export function rdfAlt<T extends RdfValueType>(itemType: T): RdfAlt<T> {
 }
 
 /**
- * A Language Alternative is actually definined in the XMP specification, and
+ * A Language Alternative is defined in the XMP specification, and
  * not part of RDF. The items of a language alternative are always simple
  * text values.
  */
@@ -117,11 +115,12 @@ export function rdfLangAlt(): RdfLangAlt {
 	};
 }
 
-export type RdfList<T extends RdfValueType> =
+export type RdfList<T extends RdfValueType = RdfValueType> =
 	| RdfBag<T>
 	| RdfSeq<T>
 	| RdfAlt<T>
 	| RdfLangAlt;
+
 export type RdfValueType =
 	| RdfLiteral
 	| RdfStruct
@@ -135,7 +134,7 @@ export interface RdfProperty {
 
 	valueType: RdfValueType;
 
-	/*
+	/**
 	 * Does the property have to be present? Default: `false`.
 	 */
 	required?: boolean;

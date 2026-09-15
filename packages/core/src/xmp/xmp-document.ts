@@ -349,12 +349,7 @@ ${output}</x:xmpmeta>
 		const token = tokens[0]!;
 		const rdfIndex = token.indices?.[0];
 
-		return this.getMetaInfoLeaf(
-			token.prefix,
-			token.name,
-			token.lang,
-			rdfIndex,
-		);
+		return this.getMetaInfoLeaf(token.prefix, token.name, token.lang, rdfIndex);
 	}
 
 	private getMetaInfoLeaf(
