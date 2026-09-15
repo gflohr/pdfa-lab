@@ -7,7 +7,11 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
-import type { RdfProperty, RdfValueType } from '../rdf/rdf-schema.js';
+import type {
+	RdfProperty,
+	RdfStruct,
+	RdfValueType,
+} from '../rdf/rdf-schema.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
 import { xmpSchema } from './schemas/xmp.js';
@@ -343,12 +347,13 @@ ${output}</x:xmpmeta>
 		}
 
 		const token = tokens[0]!;
+		const rdfIndex = token.indices?.[0];
 
 		return this.getMetaInfoLeaf(
 			token.prefix,
 			token.name,
 			token.lang,
-			token.index,
+			rdfIndex,
 		);
 	}
 
@@ -356,7 +361,7 @@ ${output}</x:xmpmeta>
 		prefix: string,
 		name: string,
 		lang?: string,
-		rdfIndex?: number,
+		rdfIndex?: number | '' | undefined,
 	): string | string[] | null {
 		const namespaceUri = this.namespaces[prefix];
 		if (!namespaceUri) {
@@ -535,7 +540,7 @@ ${output}</x:xmpmeta>
 
 	private getItemsFromList(
 		container: rdflib.NamedNode | rdflib.BlankNode,
-		rdfIndex: number | undefined,
+		rdfIndex: number | '' | undefined,
 	) {
 		if (rdfIndex) {
 			const itemNode = this.kb.any(container, RDF(`_${rdfIndex}`));
@@ -593,7 +598,7 @@ ${output}</x:xmpmeta>
 					` '${firstToken.name}'!`,
 			);
 		}
-		let valueType: RdfValueType = {
+		let parent: RdfStruct = {
 			termType: 'Struct',
 			...schema,
 		};
@@ -601,30 +606,26 @@ ${output}</x:xmpmeta>
 		let subject: rdflib.NamedNode | rdflib.BlankNode = rdflib.sym(this.baseIRI);
 		for (let i = 0; i < tokens.length - 1; i++) {
 			const token = tokens[i]!;
-			// FIXME! This is not sufficient. We could be inside of a list!
-			subject = this.getStructure(subject, token.prefix, token.name);
 
-			if (valueType.termType === 'Struct') {
-				property = valueType.properties[token.name];
-				if (!property) {
-					throw new Error(
-						`Schema registered for prefix` +
-							` '${token.prefix}' has no property named` +
-							` '${token.name}'!`,
-					);
-				}
-			} else if (valueType.termType === 'Literal') {
+			property = parent.properties[token.name];
+			if (!property) {
 				throw new Error(
-					`Intermediate node '${token.prefix}:${token.name}'` +
-						` in path '${path}' cannot be a literal!`,
+					`Schema registered for prefix` +
+						` '${token.prefix}' has no property named` +
+						` '${token.name}'!`,
 				);
-			} else {
-				// Some list type.
-				// How to set property???
-				throw new Error('TODO!');
 			}
 
-			valueType = property.valueType;
+			if (property.valueType.termType === 'Literal') {
+				throw new Error(
+					`Intermediate node '${token.prefix}:${token.name}' is a literal!`,
+				);
+			} else if (property.valueType.termType === 'Struct') {
+				subject = this.getStructure(subject, token.prefix, token.name);
+				parent = property.valueType;
+			} else {
+				throw new Error('TODO!');
+			}
 		}
 
 		// This is the leaf, which must be a literal.
@@ -640,10 +641,12 @@ ${output}</x:xmpmeta>
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
 			const container = this.getContainer(subject, node, token.name, termType);
 
-			if (!token.index) {
+			if (!token.indices) {
+				this.setListItem(container, value, options);
+			} else if (!token.indices[0]) {
 				this.setListItem(container, value, options);
 			} else {
-				this.setIndexedListItem(container, token.index, value, options);
+				this.setIndexedListItem(container, token.indices[0], value, options);
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
@@ -730,13 +733,12 @@ ${output}</x:xmpmeta>
 
 		if (!options.append) {
 			this.clearContainerItems(container);
-		} else {
 			existing = [];
 		}
 
-		const highest = existing.length ? Math.max(...existing) : -1;
+		const highest = existing.length ? Math.max(...existing) : 0;
 
-		const rdfIndex = highest + 2;
+		const rdfIndex = highest + 1;
 		this.kb.add(container, RDF(`_${rdfIndex}`), rdflib.literal(value));
 	}
 
@@ -933,7 +935,8 @@ ${output}</x:xmpmeta>
 			// parents (Alt/Bag/Seq).
 			const hasContainer = childElements.some(
 				(child) =>
-					child.namespaceURI === NS_RDF && child.localName &&
+					child.namespaceURI === NS_RDF &&
+					child.localName &&
 					['Alt', 'Bag', 'Seq'].includes(child.localName),
 			);
 			if (hasContainer) {

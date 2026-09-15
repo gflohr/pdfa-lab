@@ -4,7 +4,7 @@ export interface PathToken {
 	prefix: string;
 	name: string;
 	lang?: string;
-	index?: number | '';
+	indices?: (number | '')[];
 }
 
 /** @internal */
@@ -15,15 +15,15 @@ export function parsePath(path: string): PathToken[] {
 
 	let parentPrefix = '';
 	parts.forEach((part) => {
-		let index: number | '' | undefined;
-		const indexMatch = part.match(/\[(.*)\]/);
+		let indices: (number | '')[] | undefined;
+		const indexMatch = part.match(/\[(.*)\]$/);
 		if (indexMatch) {
 			part = part.substring(0, indexMatch.index);
 			if (!indexMatch[1]) {
-				index = '';
+				indices = [''];
 			} else if (indexMatch[1].match(/^[-+]?[0-9]+$/)) {
-				index = parseInt(indexMatch[1], 10);
-				if (index === 0) {
+				indices = [parseInt(indexMatch[1], 10)];
+				if (indices[0] === 0) {
 					throw new Error(
 						'XMP paths are 1-based, 0 is not allowed as an index!',
 					);
@@ -63,8 +63,8 @@ export function parsePath(path: string): PathToken[] {
 		}
 
 		const token: PathToken = { prefix: prefix!, name: name! };
-		if (typeof index !== 'undefined') {
-			token.index = index;
+		if (typeof indices !== 'undefined') {
+			token.indices = indices;
 		}
 
 		if (typeof lang !== 'undefined') {

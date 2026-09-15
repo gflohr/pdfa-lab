@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePath, PathToken } from './parse-path.js';
+import { type PathToken, parsePath } from './parse-path.js';
 
 describe('XMP Path Parser', () => {
 	it('should parse a single component path', () => {
@@ -73,7 +73,7 @@ describe('XMP Path Parser', () => {
 			{
 				prefix: 'xy',
 				name: 'person',
-				index: 1,
+				indices: [1],
 			},
 			{
 				prefix: 'xy',
@@ -103,12 +103,12 @@ describe('XMP Path Parser', () => {
 			{
 				prefix: 'xy',
 				name: 'person',
-				index: '',
+				indices: [''],
 			},
 			{
 				prefix: 'xy',
 				name: 'name',
-			}
+			},
 		];
 		expect(parsePath(path)).toStrictEqual(wanted);
 	});
@@ -119,12 +119,12 @@ describe('XMP Path Parser', () => {
 			{
 				prefix: 'xy',
 				name: 'person',
-				index: -1,
+				indices: [-1],
 			},
 			{
 				prefix: 'xy',
 				name: 'name',
-			}
+			},
 		];
 		expect(parsePath(path)).toStrictEqual(wanted);
 	});

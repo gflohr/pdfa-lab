@@ -430,5 +430,29 @@ describe('XMP document', () => {
 			);
 			expect(xmp).toMatchSnapshot();
 		});
+
+		it('should choke on literals as nodes', () => {
+			const xmpDoc = new XmpDocument();
+
+			expect(() =>
+				xmpDoc.setMetaInfo('dc:format/xy:unknown', 'abc-def-ghi-xyz'),
+			).toThrow("Intermediate node 'dc:format' is a literal!");
+		});
+
+		it.skip('should create lists', () => {
+			const xmpDoc = new XmpDocument();
+
+			xmpDoc.setMetaInfo(
+				'pdfaExtension:schemas[1]/pdfaSchema:schema',
+				'Factur-X PDF/A Extension Schema',
+			);
+
+			const xmp = xmpDoc.serialiseXmp();
+
+			expect(xmp).toContain(
+				'<pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>',
+			);
+			expect(xmp).toMatchSnapshot();
+		});
 	});
 });
