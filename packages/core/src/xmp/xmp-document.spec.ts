@@ -234,7 +234,7 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./dc-subject-one-two.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-one-two.xml');
 		});
 
 		it('should overwrite existing indices', async () => {
@@ -248,7 +248,7 @@ describe('XMP document', () => {
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).not.toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
 			expect(xmp).toContain('<rdf:li>yksi</rdf:li><rdf:li>kaksi</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./dc-subject-yksi-kaksi.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-yksi-kaksi.xml');
 		});
 
 		it('should not allow gaps', () => {
@@ -272,7 +272,7 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./dc-subject-one-two-three.xml');
+			await expect(xmp).toMatchFileSnapshot('./snapshots/dc-subject-one-two-three.xml');
 		});
 	});
 
