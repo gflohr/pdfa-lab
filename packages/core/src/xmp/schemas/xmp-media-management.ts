@@ -20,11 +20,11 @@ import type { XmpSchema } from '../xmp-schema.js';
  * The following properties are “owned” by the DAM system and should be set by
  * applications under their direction; they should not be used by unmanaged
  * files: `xmpMM:ManagedFrom`, `xmpMM:Manager`, `xmpMM:ManageTo`,
- * `xmpMM:ManageUI`, `xmpMM: ManagerVariant`.
+ * `xmpMM:ManageUI`, `xmpMM:ManagerVariant`.
  *
  * The following properties are owned by the DAM system for managed files, but
  * can also be used by applications for unmanaged files: `xmpMM:DerivedFrom`,
- * `xmpMM:DocumentID`, `xmpMM: RenditionClass`, `xmpMM:RenditionParams`,
+ * `xmpMM:DocumentID`, `xmpMM:RenditionClass`, `xmpMM:RenditionParams`,
  * `xmpMM:VersionID`, `xmpMM:Versions`.
  *
  * The `xmpMM:History` property is always owned by the application.
