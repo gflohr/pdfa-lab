@@ -154,4 +154,15 @@ describe('XMP Path Parser', () => {
 			"Invalid language tag 'de%de'",
 		);
 	});
+
+	it('should allow multiple indices', () => {
+		const path = 'xy:bagOfBags[23][4]';
+		expect(parsePath(path)).toStrictEqual([
+			{
+				prefix: 'xy',
+				name: 'bagOfBags',
+				indices: [23, 4],
+			},
+		]);
+	});
 });

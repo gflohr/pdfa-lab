@@ -16,21 +16,24 @@ export function parsePath(path: string): PathToken[] {
 	let parentPrefix = '';
 	parts.forEach((part) => {
 		let indices: (number | '')[] | undefined;
-		const indexMatch = part.match(/\[(.*)\]$/);
-		if (indexMatch) {
+		let indexMatch = part.match(/\[([^[\]]*)\]$/);
+		while (indexMatch) {
+			indices ??= [];
 			part = part.substring(0, indexMatch.index);
 			if (!indexMatch[1]) {
-				indices = [''];
+				indices.unshift('');
 			} else if (indexMatch[1].match(/^[-+]?[0-9]+$/)) {
-				indices = [parseInt(indexMatch[1], 10)];
-				if (indices[0] === 0) {
+				const index = parseInt(indexMatch[1], 10);
+				if (index === 0) {
 					throw new Error(
 						'XMP paths are 1-based, 0 is not allowed as an index!',
 					);
 				}
+				indices.unshift(index);
 			} else {
 				throw new Error(`Invalid index '${indexMatch[1]}'`);
 			}
+			indexMatch = part.match(/\[(.*)\]$/);
 		}
 
 		const langMatch = part.match(/@(.*)/);
