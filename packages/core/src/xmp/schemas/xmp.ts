@@ -2,7 +2,6 @@ import { rdfBag } from '../../rdf/rdf-schema.js';
 import { xmpDate } from '../value-types/core/basic/date.js';
 import { xmpText } from '../value-types/core/basic/text.js';
 import { xmpAgentName } from '../value-types/core/derived/agent-name.js';
-import { xmpProperName } from '../value-types/core/derived/proper-name.js';
 import type { XmpSchema } from '../xmp-schema.js';
 
 /**
@@ -70,7 +69,7 @@ export const xmpSchema: XmpSchema = {
 		 * to an array would break compatibility with existing XMP processors.
 		 */
 		Identifier: {
-			valueType: rdfBag(xmpProperName),
+			valueType: rdfBag(xmpText),
 		},
 
 		/**
