@@ -1039,12 +1039,12 @@ ${output}</x:xmpmeta>
 		prefix: string,
 		name: string,
 	): rdflib.BlankNode {
-		const schema = this.schemas[prefix];
-		if (!schema) {
+		const namespaceURI = this.namespaces[prefix];
+		if (!namespaceURI) {
 			throw new Error(`No schema registered for prefix '${prefix}'.`);
 		}
 
-		const predicate = rdflib.sym(`${schema.namespaceURI}${name}`);
+		const predicate = rdflib.sym(`${namespaceURI}${name}`);
 		const existing = this.kb.any(parent, predicate, null);
 
 		if (
