@@ -360,6 +360,9 @@ ${output}</x:xmpmeta>
 		}
 
 		const token = tokens[0]!;
+		if (token.indices && token.indices.length > 1) {
+			throw new Error('Nested container reads are not yet implemented!');
+		}
 		const rdfIndex = token.indices?.[0];
 
 		return this.getMetaInfoLeaf(token.prefix, token.name, token.lang, rdfIndex);
