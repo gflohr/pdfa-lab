@@ -232,6 +232,7 @@ export class XmpDocument {
 
 	/** @internal */
 	public serialiseXmp(): string {
+		// FIXME! The clean-up is unnecessary!
 		const output = this.serialise('application/rdf+xml', undefined)
 			.replace(/^( {4})+/gm, (match) => '\t'.repeat(match.length / 4))
 			.replace(/\n$/, '')
