@@ -100,7 +100,7 @@ export const xmpMediaManagementSchema: XmpSchema = {
 		 * different management systems.
 		 */
 		ManagedFrom: {
-			valueType: rdfBag(xmpResourceRef),
+			valueType: xmpResourceRef,
 		},
 
 		/**
