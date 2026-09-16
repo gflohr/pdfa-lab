@@ -1,17 +1,19 @@
 import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 
 /**
- * The name of an XMP processor, a {@link XmpText} value.
+ * A value chosen from a vocabulary of values. Vocabularies provide a means of
+ * specifying a limited and possibly extensible set of values for a property.
  *
- * It is recommended that the value use this format convention:
+ * A choice can be open or closed:
  *
- * 	Organization Software_name Version (token;token;...)
+ * * An open choice has one or more lists of preferred values, but other values can be used freely.
+ * * A closed choice has one or more lists of allowed values, other values shall not be used.
  *
- * * Organization: The name of the company or organization providing the software, no SPACEs.
- * * Software_name: The full name of the software, SPACEs allowed.
- * * version: The version of the software, no SPACEs.
- * * tokens: Can be used to identify an operating system, plug-in, or more detailed version information.
+ * This value type represents an open choice. Use the factory function
+ * {@link xmpClosedChoice} for a closed choice.
  *
- * EXAMPLE "Adobe Acrobat 9.0 (Mac OS X 10.5)"
+ * NOTE An XMP reader would be more robust if it tolerated unexpected values
+ * for closed choice types when the set of allowed values can be expected to
+ * grow over time.
  */
 export const xmpChoice = rdfLiteral('Choice');
