@@ -4,6 +4,7 @@ import { rdfLiteral } from '../../../../rdf/rdf-schema.js';
 /**
  * Generates a closed {@link Choice}.
  */
+// @NO_SIDE_EFFECTS
 export function xmpClosedChoice(choices: string[]) {
 	const allowed = new Set(choices);
 
