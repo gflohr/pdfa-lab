@@ -42,7 +42,7 @@ export const pdfaSchema: RdfStruct = {
 		 * prefixes.
 		 */
 		prefix: {
-			valueType: xmpURI,
+			valueType: xmpText,
 		},
 
 		/**
