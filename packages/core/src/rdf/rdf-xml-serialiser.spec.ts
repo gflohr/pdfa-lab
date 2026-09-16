@@ -290,4 +290,46 @@ describe('RdfXmlSerialiser', () => {
 			'./__snapshots__/container-with-properties.xml',
 		);
 	});
+
+	it('emits rdf:resource for NamedNode values', async () => {
+		const EX_NS = 'http://example.org/ns#';
+		const resourceUri = 'http://example.org/resources/doc1';
+
+		store.add(
+			docSubject,
+			rdflib.sym(`${EX_NS}seeAlso`),
+			rdflib.sym(resourceUri),
+		);
+
+		const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
+
+		expect(xml).toContain(`<ex:seeAlso rdf:resource="${resourceUri}"/>`);
+
+		await expect(xml).toMatchFileSnapshot(
+			'./__snapshots__/named-node-resource.xml',
+		);
+	});
+
+	it('emits rdf:nodeID and breaks infinite recursion on cyclic blank nodes', async () => {
+		const EX_NS = 'http://example.org/ns#';
+
+		const nodeA = rdflib.blankNode();
+		const nodeB = rdflib.blankNode();
+
+		// doc -> nodeA -> nodeB -> nodeA (cycle)
+		store.add(docSubject, rdflib.sym(`${EX_NS}parent`), nodeA);
+		store.add(nodeA, rdflib.sym(`${EX_NS}child`), nodeB);
+		store.add(nodeB, rdflib.sym(`${EX_NS}backToParent`), nodeA);
+
+		// Call serialise without hitting stack overflow
+		const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
+
+		expect(xml).toContain('<ex:parent rdf:parseType="Resource">');
+		expect(xml).toContain('<ex:child rdf:parseType="Resource">');
+		expect(xml).toContain(`rdf:nodeID="${nodeA.value}"`);
+
+		await expect(xml).toMatchFileSnapshot(
+			'./__snapshots__/cyclic-blank-nodes.xml',
+		);
+	});
 });
