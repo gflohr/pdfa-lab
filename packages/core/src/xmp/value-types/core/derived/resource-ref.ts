@@ -1,4 +1,4 @@
-import { type RdfStruct, rdfBag } from '../../../../rdf/rdf-schema.js';
+import { type RdfStruct, rdfSeq } from '../../../../rdf/rdf-schema.js';
 import { xmpDate } from '../basic/date.js';
 import { xmpText } from '../basic/text.js';
 import { xmpAgentName } from './agent-name.js';
@@ -35,7 +35,7 @@ export const xmpResourceRef: RdfStruct = {
 		 * order is the recommended order in attempting to locate the resource.
 		 */
 		alternatePaths: {
-			valueType: rdfBag(xmpURI),
+			valueType: rdfSeq(xmpURI),
 		},
 
 		/**
