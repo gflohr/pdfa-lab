@@ -645,27 +645,21 @@ ${output}</x:xmpmeta>
 
 		const schema = this.schemas[firstToken.prefix];
 		if (!schema) {
-			throw new Error(`Unknown prefix: '${tokens[0]!.prefix}`);
+			throw new Error(`Unknown prefix: '${firstToken.prefix}'`);
 		}
 
-		let property: RdfProperty | undefined = schema.properties[firstToken.name];
-		if (!property) {
-			throw new Error(
-				`Schema registered for prefix` +
-					` '${firstToken.prefix}' has no property named` +
-					` '${firstToken.name}'!`,
-			);
-		}
 		let parent: RdfStruct = {
 			termType: 'Struct',
 			...schema,
 		};
 
 		let subject: rdflib.NamedNode | rdflib.BlankNode = rdflib.sym(this.baseIRI);
+
+		// Traverse intermediate path segments (0 to N-2).
 		for (let i = 0; i < tokens.length - 1; i++) {
 			const token = tokens[i]!;
 
-			property = parent.properties[token.name];
+			const property: RdfProperty | undefined = parent.properties[token.name];
 			if (!property) {
 				throw new Error(
 					`Schema registered for prefix` +
@@ -694,10 +688,28 @@ ${output}</x:xmpmeta>
 				const { container } = this.getContainer(subject, node, token, property);
 
 				subject = container;
+				if (
+					'itemType' in property.valueType &&
+					property.valueType.itemType.termType === 'Struct'
+				) {
+					parent = property.valueType.itemType as RdfStruct;
+				}
 			}
 		}
 
-		return [subject, property];
+		// Resolve and validate the final leaf property on the parent
+		// struct/schema.
+		const lastToken = tokens[tokens.length - 1]!;
+		const leafProperty = parent.properties[lastToken.name];
+		if (!leafProperty) {
+			throw new Error(
+				`Schema registered for prefix` +
+					` '${lastToken.prefix}' has no property named` +
+					` '${lastToken.name}'!`,
+			);
+		}
+
+		return [subject, leafProperty];
 	}
 
 	private setLiteralMetaInfo(
