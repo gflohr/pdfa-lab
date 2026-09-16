@@ -22,7 +22,11 @@ interface XmpProperty {
 type RdfValue =
 	| { type: 'Literal'; value: string; lang?: string; datatype?: string }
 	| { type: 'Struct'; properties: XmpProperty[] }
-	| { type: 'Bag' | 'Seq' | 'Alt'; items: RdfValue[] }
+	| {
+			type: 'Bag' | 'Seq' | 'Alt';
+			items: RdfValue[];
+			properties?: XmpProperty[];
+	  }
 	| { type: 'Resource'; uri: string };
 
 const RDF_CONTAINER_TYPES = new Set([
@@ -113,7 +117,6 @@ export class RdfXmlSerialiser {
 				for (const item of value.items) {
 					const li = doc.createElementNS(NS_RDF, 'rdf:li');
 					if (item.type === 'Struct') {
-						// Flatten struct directly into <rdf:li rdf:parseType="Resource">
 						li.setAttributeNS(NS_RDF, 'rdf:parseType', 'Resource');
 						for (const prop of item.properties) {
 							this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
@@ -129,6 +132,21 @@ export class RdfXmlSerialiser {
 					}
 					container.appendChild(li);
 				}
+
+				// Emit extra non-membership properties attached to the
+				// container node.
+				if (value.properties) {
+					for (const prop of value.properties) {
+						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
+						const propEl = doc.createElementNS(
+							prop.namespaceUri,
+							`${prop.prefix}:${prop.name}`,
+						);
+						this.appendRdfValue(doc, rootNode, propEl, prop.value);
+						container.appendChild(propEl);
+					}
+				}
+
 				parentEl.appendChild(container);
 				break;
 			}
@@ -164,7 +182,7 @@ export class RdfXmlSerialiser {
 		for (const stmt of statements) {
 			const predUri = stmt.predicate.value;
 
-			// Skip internal rdf:type predicate on the property list
+			// Skip internal rdf:type predicate on the property list.
 			if (
 				predUri === `${NS_RDF}type` &&
 				RDF_CONTAINER_TYPES.has(stmt.object.value)
@@ -235,10 +253,17 @@ export class RdfXmlSerialiser {
 				| 'Seq'
 				| 'Alt';
 
-			// Extract container items (rdf:_1, rdf:_2, ...) in numerical order
-			const itemStmts = kb
-				.statementsMatching(node, null, null)
-				.filter((s) => s.predicate.value.startsWith(`${NS_RDF}_`))
+			const allStmts = kb.statementsMatching(node, null, null);
+
+			// 1. Extract container items (rdf:_1, rdf:_2, ...) in numerical order
+			const itemStmts = allStmts
+				.filter((s) => {
+					const pred = s.predicate.value;
+					return (
+						pred.startsWith(`${NS_RDF}_`) &&
+						/^\d+$/.test(pred.slice(NS_RDF.length + 1))
+					);
+				})
 				.sort((a, b) => {
 					const idxA = parseInt(
 						a.predicate.value.replace(`${NS_RDF}_`, ''),
@@ -252,16 +277,59 @@ export class RdfXmlSerialiser {
 				});
 
 			const items = itemStmts.map((s) =>
-				this.extractRdfValue(kb, s.object as rdflib.BlankNode, prefixMap),
+				this.extractRdfValue(
+					kb,
+					s.object as rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
+					prefixMap,
+				),
 			);
+
+			// 2. Extract non-membership, non-type properties attached to the container resource
+			const propStmts = allStmts.filter((s) => {
+				const pred = s.predicate.value;
+				// Exclude container's own rdf:type assertion (represented by <rdf:Seq> element tag)
+				if (pred === `${NS_RDF}type`) {
+					return false;
+				}
+				// Exclude membership predicates (rdf:_1, rdf:_2, ...)
+				if (
+					pred.startsWith(`${NS_RDF}_`) &&
+					/^\d+$/.test(pred.slice(NS_RDF.length + 1))
+				) {
+					return false;
+				}
+				return true;
+			});
+
+			const containerProperties: XmpProperty[] = [];
+			for (const stmt of propStmts) {
+				const { namespaceUri, name, prefix } = this.parseUri(
+					stmt.predicate.value,
+					prefixMap,
+				);
+				const value = this.extractRdfValue(
+					kb,
+					stmt.object as rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
+					prefixMap,
+				);
+				containerProperties.push({
+					prefix,
+					namespaceUri,
+					name,
+					value,
+				});
+			}
 
 			return {
 				type: containerType,
 				items,
+				...(containerProperties.length > 0
+					? { properties: containerProperties }
+					: {}),
 			};
 		}
 
-		// 4. Struct node (fallback for any node containing child properties)
+		// 4. Struct node (fallback for any node containing child properties).
 		const structProperties = this.extractXmpProperties(
 			kb,
 			node as unknown as rdflib.NamedNode,
@@ -277,7 +345,8 @@ export class RdfXmlSerialiser {
 		uri: string,
 		prefixMap: Record<string, string>,
 	): { namespaceUri: string; name: string; prefix: string } {
-		// 1. Check against explicitly registered prefix map (namespaceUri -> prefix)
+		// 1. Check against explicitly registered prefix map
+		// (namespaceUri -> prefix).
 		for (const [nsUri, prefix] of Object.entries(prefixMap)) {
 			if (uri.startsWith(nsUri)) {
 				const name = uri.slice(nsUri.length);
@@ -293,7 +362,7 @@ export class RdfXmlSerialiser {
 			}
 		}
 
-		// 2. Fallback delimiter splitting at '#' or last '/'
+		// 2. Fallback delimiter splitting at '#' or last '/'.
 		const splitIdx = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
 		if (splitIdx !== -1) {
 			const namespaceUri = uri.slice(0, splitIdx + 1);

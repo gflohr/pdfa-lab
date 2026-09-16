@@ -256,4 +256,38 @@ describe('RdfXmlSerialiser', () => {
 
 		await expect(xml).toMatchFileSnapshot('./__snapshots__/typed-literals.xml');
 	});
+
+	it('preserves non-membership properties on RDF container resources', async () => {
+		const bagNode = rdflib.blankNode();
+		const EX_NS = 'http://example.org/ns#';
+
+		store.add(docSubject, rdflib.sym(`${DC_NS}subject`), bagNode);
+		store.add(bagNode, rdflib.sym(`${RDF_NS}type`), rdflib.sym(`${RDF_NS}Bag`));
+
+		// Membership items.
+		store.add(bagNode, rdflib.sym(`${RDF_NS}_1`), rdflib.literal('Item 1'));
+
+		// Non-membership property on the container itself.
+		store.add(
+			bagNode,
+			rdflib.sym(`${EX_NS}containerMeta`),
+			rdflib.literal('Container Metadata Value'),
+		);
+
+		const xml = serialiser.serialise(store, {
+			...prefixMap,
+			[EX_NS]: 'ex',
+		});
+
+		expect(xml).toContain('<dc:subject>');
+		expect(xml).toContain('<rdf:Bag>');
+		expect(xml).toContain('<rdf:li>Item 1</rdf:li>');
+		expect(xml).toContain(
+			'<ex:containerMeta>Container Metadata Value</ex:containerMeta>',
+		);
+
+		await expect(xml).toMatchFileSnapshot(
+			'./__snapshots__/container-with-properties.xml',
+		);
+	});
 });
