@@ -5,6 +5,7 @@ import { xmpDate } from './value-types/core/basic/date.js';
 import { xmpInteger } from './value-types/core/basic/integer.js';
 import { xmpReal } from './value-types/core/basic/real.js';
 import { xmpText } from './value-types/core/basic/text.js';
+import { xmpAgentName } from './value-types/core/derived/agent-name.js';
 import { xmpChoice } from './value-types/core/derived/choice.js';
 import { xmpGUID } from './value-types/core/derived/guid.js';
 import { xmpLocale } from './value-types/core/derived/locale.js';
@@ -32,7 +33,7 @@ export type XmpCoreBaseType =
 	| 'lang alt';
 
 export const xmpCoreDerivedTypes = {
-	agentname: xmpBoolean,
+	agentname: xmpAgentName,
 	choice: xmpChoice,
 	guid: xmpGUID,
 	locale: xmpLocale,
