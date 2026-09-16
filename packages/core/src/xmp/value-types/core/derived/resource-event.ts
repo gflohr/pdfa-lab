@@ -93,6 +93,7 @@ export const xmpResourceEvent: RdfStruct = {
 		 */
 		when: {
 			valueType: xmpDate,
+			required: true,
 		},
 	},
 };
