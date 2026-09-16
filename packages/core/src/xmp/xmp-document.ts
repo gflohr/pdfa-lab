@@ -686,8 +686,8 @@ ${output}</x:xmpmeta>
 				if (typeof namespaceURI === 'undefined') {
 					throw new Error(
 						`Schema registered for prefix` +
-							` '${firstToken.prefix}' has no property named` +
-							` '${firstToken.name}'!`,
+							` '${token.prefix}' has no property named` +
+							` '${token.name}'!`,
 					);
 				}
 				const node = rdflib.sym(`${namespaceURI}${token.name}`);
