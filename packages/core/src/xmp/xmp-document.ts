@@ -630,7 +630,7 @@ ${output}</x:xmpmeta>
 			}
 		} else if (termType === 'Lang Alt') {
 			const node = rdflib.sym(`${namespaceURI}${token.name}`);
-			const container = this.getLangAltContainer(subject, node, token);
+			const container = this.getLangAltContainer(subject, node);
 
 			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
@@ -731,7 +731,6 @@ ${output}</x:xmpmeta>
 	private getLangAltContainer(
 		subject: rdflib.NamedNode | rdflib.BlankNode,
 		node: rdflib.NamedNode,
-		token: PathToken,
 	): rdflib.NamedNode | rdflib.BlankNode {
 		const targetContainerType = RDF('Alt');
 
@@ -751,7 +750,9 @@ ${output}</x:xmpmeta>
 			return container;
 		}
 
-		container = rdflib.blankNode(token.name);
+		// Generate an anonymous, unique blank node to avoid graph node
+		// collisions.
+		container = rdflib.blankNode();
 		this.kb.add(container, RDF('type'), targetContainerType);
 		this.kb.add(subject, node, container);
 
