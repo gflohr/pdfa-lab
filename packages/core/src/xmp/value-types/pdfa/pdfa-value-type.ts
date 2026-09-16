@@ -1,8 +1,8 @@
-import * as v from 'valibot';
-import { type RdfStruct, rdfLiteral } from '../../../rdf/rdf-schema.js';
+import { type RdfStruct, rdfSeq } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpChoice } from '../core/derived/choice.js';
 import { xmpURI } from '../core/derived/uri.js';
+import { pdfaField } from './pdfa-field.js';
 
 /**
  * PDF/A Value Type namespace.
@@ -46,11 +46,7 @@ export const pdfaValueType: RdfStruct = {
 		 * Separate entries are required for all fields in a structured type.
 		 */
 		field: {
-			valueType: rdfLiteral(
-				'name',
-				[v.regex(/^[A-Za-z_][A-Za-z0-9_.-]*$/)],
-				true,
-			),
+			valueType: rdfSeq(pdfaField),
 		},
 
 		/**
