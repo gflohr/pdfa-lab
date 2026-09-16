@@ -71,6 +71,7 @@
 		"@pdfa-lab/fontkit": "workspace:*",
 		"@xmldom/xmldom": "^0.9.11",
 		"rdflib": "^2.4.0",
-		"valibot": "^1.4.1"
+		"valibot": "^1.4.1",
+		"xml-formatter": "^3.7.0"
 	}
 }

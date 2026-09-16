@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePath } from './parse-path.js';
+import { type PathToken, parsePath } from './parse-path.js';
 
 describe('XMP Path Parser', () => {
 	it('should parse a single component path', () => {
@@ -73,7 +73,7 @@ describe('XMP Path Parser', () => {
 			{
 				prefix: 'xy',
 				name: 'person',
-				index: 0,
+				indices: [1],
 			},
 			{
 				prefix: 'xy',
@@ -97,9 +97,36 @@ describe('XMP Path Parser', () => {
 		]);
 	});
 
-	it('should throw an exception for empty indices', () => {
+	it('should allow empty indices', () => {
 		const path = '/xy:person[]/name';
-		expect(() => parsePath(path)).toThrow("Empty index '[]' is not allowed!");
+		const wanted: PathToken[] = [
+			{
+				prefix: 'xy',
+				name: 'person',
+				indices: [''],
+			},
+			{
+				prefix: 'xy',
+				name: 'name',
+			},
+		];
+		expect(parsePath(path)).toStrictEqual(wanted);
+	});
+
+	it('should allow negative indices', () => {
+		const path = '/xy:person[-1]/name';
+		const wanted: PathToken[] = [
+			{
+				prefix: 'xy',
+				name: 'person',
+				indices: [-1],
+			},
+			{
+				prefix: 'xy',
+				name: 'name',
+			},
+		];
+		expect(parsePath(path)).toStrictEqual(wanted);
 	});
 
 	it('should ignore empty path elements', () => {
@@ -126,5 +153,16 @@ describe('XMP Path Parser', () => {
 		expect(() => parsePath('xy:foo@de%de/bar')).toThrow(
 			"Invalid language tag 'de%de'",
 		);
+	});
+
+	it('should allow multiple indices', () => {
+		const path = 'xy:bagOfBags[23][4]';
+		expect(parsePath(path)).toStrictEqual([
+			{
+				prefix: 'xy',
+				name: 'bagOfBags',
+				indices: [23, 4],
+			},
+		]);
 	});
 });

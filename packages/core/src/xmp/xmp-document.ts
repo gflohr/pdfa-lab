@@ -7,11 +7,18 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
-import { dublinCoreNamespace } from './namespaces/dublin-core.js';
-import { xmpNamespace } from './namespaces/xmp.js';
-import { xmpMediaManagementNamespace } from './namespaces/xmp-media-management.js';
-import { parsePath } from './util/parse-path.js';
-import type { XmpNamespaceSchema, XmpSchema } from './xmp-namespace.js';
+import {
+	type RdfProperty,
+	type RdfStruct,
+	type RdfValueType,
+	rdfLiteral,
+} from '../rdf/rdf-schema.js';
+import { dublinCoreSchema } from './schemas/dublin-core.js';
+import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
+import { xmpSchema } from './schemas/xmp.js';
+import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
+import { type PathToken, parsePath } from './util/parse-path.js';
+import type { XmpSchema } from './xmp-schema.js';
 
 /**
  * Default base IRI.
@@ -91,28 +98,19 @@ export interface XMPSetMetaInfoOptions {
 
 const bom = '\uFEFF';
 
+const NS_RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+const RDF = rdflib.Namespace(NS_RDF);
+
 /** @internal */
 export class XmpDocument {
 	/** @internal */
 	public static readonly NS_X = 'adobe:ns:meta/';
 
-	/** @internal */
-	private static readonly NS_RDF =
-		'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-
-	/** The Dublin Core namespace. Preferred prefix: `dc`. */
-	public static readonly NS_DC = 'http://purl.org/dc/elements/1.1/';
-
-	/** The Adobe XMP Basic namespace. Preferred prefix: `xmp`. */
-	public static readonly NS_XMP = 'http://ns.adobe.com/xap/1.0/';
-
-	/** The XMP Media Management namespace. Preferred prefix: `xmpMM`. */
-	public static readonly NS_XMPMM = 'http://ns.adobe.com/xap/1.0/mm/';
-
 	private doc: Document;
 	private kb = rdflib.graph();
+	private schemas: Record<string, XmpSchema> = {};
 	private namespaces: Record<string, string> = {};
-	private schemas: Record<string, XmpNamespaceSchema> = {};
 
 	constructor(
 		xmlString?: string,
@@ -159,13 +157,11 @@ export class XmpDocument {
 
 		rdflib.parse(xmlString, this.kb, baseIRI, 'application/rdf+xml');
 
-		this.registerNamespace('dc', XmpDocument.NS_DC, dublinCoreNamespace);
-		this.registerNamespace('xmp', XmpDocument.NS_XMP, xmpNamespace);
-		this.registerNamespace(
-			'xmpMM',
-			XmpDocument.NS_XMPMM,
-			xmpMediaManagementNamespace,
-		);
+		this.registerNamespace('dc', dublinCoreSchema);
+		this.registerNamespace('xmp', xmpSchema);
+		this.registerNamespace('xmpMM', xmpMediaManagementSchema);
+
+		this.registerNamespace('pdfaExtension', pdfaExtensionSchema);
 	}
 
 	private static createEmptyXmpMeta(): string {
@@ -203,16 +199,27 @@ export class XmpDocument {
 		format: RdfSerialisationFormat = 'application/rdf+xml',
 		options: RdfSerialisationOptions = {},
 	): string {
+		const namespaces: Record<string, string> = {};
+		for (const prefix in this.schemas) {
+			const schema = this.schemas[prefix]!;
+			namespaces[prefix] = schema.namespaceURI;
+		}
+
 		const output = rdflib.serialize(
 			null,
 			this.kb,
 			this.baseIRI,
 			format,
 			undefined,
-			{ ...options, namespaces: this.namespaces },
+			{ ...options, namespaces },
 		);
 		if (!output) {
 			throw new Error(`Invalid output format '${format}'!`);
+		}
+
+		// Workaround for https://github.com/linkeddata/rdflib.js/issues/869.
+		if (format === 'application/rdf+xml') {
+			return this.sanitizeRdfXml(output);
 		}
 
 		return output;
@@ -238,7 +245,7 @@ ${output}</x:xmpmeta>
 					for (let i = 0; i < child.attributes.length; ++i) {
 						const attr = child.attributes.item(i);
 						if (attr?.name.startsWith('xmlns:') && attr.name.length > 6) {
-							if (attr.value === XmpDocument.NS_RDF) {
+							if (attr.value === NS_RDF) {
 								const prefix = attr.name.slice(6);
 								if (child.nodeName === `${prefix}:RDF`) {
 									return child;
@@ -251,7 +258,7 @@ ${output}</x:xmpmeta>
 		}
 
 		// Create and attach <rdf:RDF>
-		const newRdf = this.doc.createElementNS(XmpDocument.NS_RDF, 'rdf:RDF');
+		const newRdf = this.doc.createElementNS(NS_RDF, 'rdf:RDF');
 		xmpMeta.appendChild(newRdf);
 		return newRdf;
 	}
@@ -275,42 +282,76 @@ ${output}</x:xmpmeta>
 	 * * `xmpTPg`
 	 *
 	 * @param prefix - the prefix to register (must be non-empty)
-	 * @param namespace
 	 * @param schema
-	 * @see {@link XMPDocument.NS_IPTC4XMPCORE}, {@link XmpDocument.NS_CRS}, {@link XmpDocument.NS_DC}, {@link XMPDocument.NS_EXIF}, {@link XMPDocument.NS_PDF}, {@link XMPDocument.NS_PHOTOSHOP}, {@link XMPDocument.NS_TIFF}, {@link XMPDocument.NS_XMP}, {@link XMPDocument.NS_XMPBJ}, {@link XMPDocument.NS_XMPDM}, {@link XMPDocument.NS_XMPRIGHTS}, {@link XMPDocument.NS_XMPTPG}.
 	 */
-	public registerNamespace(
-		prefix: string,
-		namespace: string,
-		schema: XmpNamespaceSchema,
-	) {
+	public registerNamespace(prefix: string, schema: XmpSchema) {
 		if (!prefix?.length) {
 			throw new Error('Missing or empty prefix argument!');
 		}
 
-		if (!namespace?.length) {
-			throw new Error('Missing or empty namespace argument!');
-		}
-
 		if (!schema) {
-			throw new Error('The schema argument must be a valibot object schema!');
+			throw new Error('No schema specified!');
 		}
 
-		if (this.namespaces[prefix]) {
+		if (!schema.namespaceURI) {
+			throw new Error('No namespace URI specified!');
+		}
+
+		if (this.schemas[prefix]) {
 			throw new Error(
-				`Prefix '${prefix}' is already registered for URL '${this.namespaces[prefix]}'!`,
+				`Prefix '${prefix}' is already registered for URL '${this.schemas[prefix].namespaceURI}'!`,
 			);
 		}
 
-		if (!schema.entries) {
-			throw new Error('Schema must be an object based schema!');
-		}
-
-		this.namespaces[prefix] = namespace;
 		this.schemas[prefix] = schema;
+		this.namespaces[prefix] = schema.namespaceURI;
+		this.kb.setPrefixForURI(prefix, schema.namespaceURI);
+		this.registerPropertyNamespaces(schema.properties);
 	}
 
-	public getMetaInfo(path: string): string | null {
+	private registerPropertyNamespaces(properties: Record<string, RdfProperty>) {
+		for (const name in properties) {
+			const property = properties[name]!;
+			const termType = property.valueType.termType;
+
+			if (termType === 'Struct') {
+				const vt = property.valueType;
+				this.registerStructNamespaces(vt);
+			} else if (termType === 'Bag' || termType === 'Seq') {
+				let itemType = property.valueType.itemType;
+				while (itemType.termType === 'Bag' || itemType.termType === 'Seq') {
+					itemType = itemType.itemType;
+				}
+
+				if (itemType.termType === 'Struct') {
+					this.registerStructNamespaces(itemType);
+				}
+			}
+		}
+	}
+
+	private registerStructNamespaces(valueType: RdfStruct) {
+		const prefix = valueType.prefix;
+		const namespaceURI = valueType.namespaceURI;
+
+		if (
+			typeof this.namespaces[prefix] !== 'undefined' &&
+			this.namespaces[prefix] !== namespaceURI
+		) {
+			throw new Error(
+				`Cannot register prefix '${prefix}'` +
+					` for namespace URI '${namespaceURI}': already registered` +
+					` for namespace URI '${this.namespaces[prefix]}'!`,
+			);
+		}
+
+		this.namespaces[prefix] = namespaceURI;
+		this.kb.setPrefixForURI(prefix, namespaceURI);
+
+		this.registerPropertyNamespaces(valueType.properties);
+	}
+
+	public getMetaInfo(path: string): string | string[] | null {
 		const tokens = parsePath(path);
 		if (!tokens.length) {
 			throw new Error('Path must not be empty!');
@@ -319,11 +360,20 @@ ${output}</x:xmpmeta>
 		}
 
 		const token = tokens[0]!;
+		if (token.indices && token.indices.length > 1) {
+			throw new Error('Nested container reads are not yet implemented!');
+		}
+		const rdfIndex = token.indices?.[0];
 
-		return this.getMetaInfoLeaf(token.prefix, token.name);
+		return this.getMetaInfoLeaf(token.prefix, token.name, token.lang, rdfIndex);
 	}
 
-	private getMetaInfoLeaf(prefix: string, name: string): string | null {
+	private getMetaInfoLeaf(
+		prefix: string,
+		name: string,
+		lang?: string,
+		rdfIndex?: number | '' | undefined,
+	): string | string[] | null {
 		const namespaceUri = this.namespaces[prefix];
 		if (!namespaceUri) {
 			throw new Error(`Unknown prefix: '${prefix}'`);
@@ -340,43 +390,104 @@ ${output}</x:xmpmeta>
 			return null;
 		}
 
-		// Direct scalar literal value
+		// Direct scalar literal value.
 		if ((node.termType as unknown) === 'Literal') {
 			return node.value;
 		}
 
-		// RDF Container (Bag, Seq, Alt) or Struct node
+		// RDF Container (Bag, Seq, Alt) or Struct node.
 		if (node.termType === 'BlankNode' || node.termType === 'NamedNode') {
-			const rdfNs = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-			const typeValue = this.kb.anyValue(node, rdflib.sym(`${rdfNs}type`));
-			const firstItemNode = this.kb.any(node, rdflib.sym(`${rdfNs}_1`));
+			const typeValue = this.kb.anyValue(node, RDF('type'));
 
-			const isContainer =
-				typeValue === `${rdfNs}Bag` ||
-				typeValue === `${rdfNs}Seq` ||
-				typeValue === `${rdfNs}Alt` ||
-				firstItemNode !== undefined;
+			switch (typeValue) {
+				case `${NS_RDF}Bag`:
+				case `${NS_RDF}Seq`:
+					return this.getItemsFromList(node, rdfIndex);
 
-			if (isContainer) {
-				if (!firstItemNode) {
-					return null; // Empty container
-				}
-				return firstItemNode.value ?? null;
+				case `${NS_RDF}Alt`:
+					return this.getLanguageAlternative(node, lang);
+
+				default:
+					throw new Error(
+						`Nested objects (type: ${typeValue}) not yet supported!`,
+					);
 			}
-
-			throw new Error(
-				`Unsupported container or structure for property '${prefix}:${name}'`,
-			);
 		}
 
 		return null;
 	}
 
-	public setMetaInfo(
-		path: string,
-		value: string,
-		options: XMPSetMetaInfoOptions = {},
-	) {
+	private getLanguageAlternative(
+		container: rdflib.NamedNode | rdflib.BlankNode,
+		lang: string | undefined,
+	): string | null {
+		const statements = this.getLanguageStatements(container);
+		if (!statements.length) {
+			return null;
+		}
+
+		const literals = statements.filter(
+			(stmt): stmt is rdflib.Statement & { object: rdflib.Literal } =>
+				stmt.object.termType === 'Literal',
+		);
+
+		const targetLang =
+			lang && lang.trim() !== '' ? lang.toLowerCase() : 'x-default';
+
+		const matchLang = (stmtLang: string, target: string) => {
+			const normalized = stmtLang.toLowerCase();
+			if (target === 'x-default') {
+				return normalized === 'x-default' || normalized === '';
+			}
+
+			return normalized === target;
+		};
+
+		const exact = literals.find((s) =>
+			matchLang(s.object.language, targetLang),
+		);
+		if (exact) {
+			return exact.object.value;
+		}
+
+		// Subtag fallback (e.g., 'de-DE' -> 'de').
+		if (targetLang.includes('-')) {
+			const primaryLang = targetLang.split('-')[0]!;
+			const primary = literals.find(
+				(s) => s.object.language.toLowerCase() === primaryLang,
+			);
+			if (primary) {
+				return primary.object.value;
+			}
+		}
+
+		// Fallback to 'x-default' or untagged ('').
+		if (targetLang !== 'x-default') {
+			const defaultEntry = literals.find((s) =>
+				matchLang(s.object.language, 'x-default'),
+			);
+			if (defaultEntry) {
+				return defaultEntry.object.value;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get all language alternatives for a field.
+	 *
+	 * The field identified by `path` must exist and be of type `Alt`.
+	 *
+	 * An untagged value (`xml:lang=""`) is interpreted as `x-default`, but
+	 * only if `x-default` is not explicitely set.
+	 *
+	 * All language tags are normalised to lowercase.
+	 *
+	 * @param path the path, for example `dc:title`
+	 * @returns a dictionary of language alternative values or `null`
+	 */
+	public getLanguageAlternatives(path: string): Record<string, string> | null {
 		const tokens = parsePath(path);
 		if (!tokens.length) {
 			throw new Error('Path must not be empty!');
@@ -394,22 +505,132 @@ ${output}</x:xmpmeta>
 		const subject = rdflib.sym(this.baseIRI);
 		const predicate = rdflib.sym(namespaceUri + token.name);
 
-		const namespaceSchema = this.schemas[token.prefix]!;
-		const schema = namespaceSchema.entries[token.name];
-		if (!schema) {
-			throw new Error(`The node '${path}' is unknown!`);
+		const node = this.kb.any(subject, predicate) as
+			| rdflib.NamedNode
+			| rdflib.BlankNode
+			| null;
+		if (!node) {
+			return null;
 		}
 
-		if (schema.expects.includes('Array')) {
-			const node = rdflib.sym(`${namespaceUri}${token.name}`);
-			const listType =
-				(schema as XmpSchema).xmpContainer === 'Seq' ? 'Seq' : 'Bag';
-			const container = this.getContainer(subject, node, token.name, listType);
+		if (node.termType !== 'BlankNode' && node.termType !== 'NamedNode') {
+			return null;
+		}
 
-			this.setListItem(container, value, options);
-		} else if ((schema as XmpSchema).xmpContainer === 'Alt') {
-			const node = rdflib.sym(`${namespaceUri}${token.name}`);
-			const container = this.getContainer(subject, node, token.name, 'Alt');
+		const typeValue = this.kb.anyValue(node, RDF('type'));
+
+		if (typeValue !== `${NS_RDF}Alt`) {
+			return null;
+		}
+
+		const statements = this.getLanguageStatements(node);
+		const values: Record<string, string> = {};
+		let firstLang: string | undefined;
+		for (let i = 0; i < statements.length; ++i) {
+			const stmt = statements[i]!;
+			if (stmt.object.termType === 'Literal') {
+				values[stmt.object.language.toLowerCase()] = stmt.object.value;
+				if (typeof firstLang === 'undefined') {
+					firstLang = stmt.object.language.toLowerCase();
+				}
+			}
+		}
+
+		if (typeof firstLang === 'undefined') return null;
+
+		if (typeof values['x-default'] === 'undefined') {
+			if (typeof values[''] !== 'undefined') {
+				values['x-default'] = values[''];
+			} else {
+				values['x-default'] = values[firstLang]!;
+			}
+		}
+
+		return values;
+	}
+
+	private getItemsFromList(
+		container: rdflib.NamedNode | rdflib.BlankNode,
+		rdfIndex?: number | '',
+	) {
+		if (rdfIndex) {
+			const itemNode = this.kb.any(container, RDF(`_${rdfIndex}`));
+
+			return itemNode?.value ?? null;
+		}
+
+		// Get all values.
+		const RDF_LI_PREFIX = `${NS_RDF}_`;
+
+		// Extract items, parse their numeric index, sort by index, and map to values
+		return this.kb
+			.statementsMatching(container, null, null)
+			.map((stmt) => {
+				if (!stmt.predicate.value.startsWith(RDF_LI_PREFIX)) {
+					return null;
+				}
+
+				const indexStr = stmt.predicate.value.slice(RDF_LI_PREFIX.length);
+				const index = parseInt(indexStr, 10);
+
+				if (Number.isNaN(index)) {
+					return null;
+				}
+
+				return { index, value: stmt.object.value };
+			})
+			.filter((item): item is { index: number; value: string } => item !== null)
+			.sort((a, b) => a.index - b.index)
+			.map((item) => item.value);
+	}
+
+	public setMetaInfo(
+		path: string,
+		value: string,
+		options: XMPSetMetaInfoOptions = {},
+	) {
+		const tokens = parsePath(path);
+		if (!tokens.length) {
+			throw new Error('Path must not be empty!');
+		}
+
+		const [subject, property] = this.autoVivifyPath(tokens);
+
+		// This is the leaf, which must be a literal.
+		const token = tokens[tokens.length - 1]!;
+
+		const namespaceURI = this.namespaces[token.prefix]!;
+		const predicate = rdflib.sym(`${namespaceURI}${token.name}`);
+		const termType = property.valueType.termType;
+
+		if (termType === 'Alt' || termType === 'Bag' || termType === 'Seq') {
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
+			const { container, index } = this.getContainer(
+				subject,
+				node,
+				token,
+				property,
+			);
+
+			if (options.noOverwrite) {
+				const existing = this.getListItemIndices(container);
+				if (existing.length) {
+					return;
+				}
+			}
+
+			// If no indices were given, we always overwrite all existing values.
+			if (!token.indices && !options.append) {
+				this.clearContainerItems(container);
+				this.setListItem(container, value, options);
+			} else if (!index) {
+				this.setListItem(container, value, options);
+			} else {
+				this.setIndexedListItem(container, index, value, options);
+			}
+		} else if (termType === 'Lang Alt') {
+			const node = rdflib.sym(`${namespaceURI}${token.name}`);
+			const container = this.getLangAltContainer(subject, node);
 
 			this.setLanguageAlternative(container, value, token.lang, options);
 		} else {
@@ -417,13 +638,86 @@ ${output}</x:xmpmeta>
 		}
 	}
 
+	private autoVivifyPath(
+		tokens: PathToken[],
+	): [rdflib.BlankNode | rdflib.NamedNode, RdfProperty] {
+		const firstToken = tokens[0]!;
+
+		const schema = this.schemas[firstToken.prefix];
+		if (!schema) {
+			throw new Error(`Unknown prefix: '${firstToken.prefix}'`);
+		}
+
+		let parent: RdfStruct = {
+			termType: 'Struct',
+			...schema,
+		};
+
+		let subject: rdflib.NamedNode | rdflib.BlankNode = rdflib.sym(this.baseIRI);
+
+		// Traverse intermediate path segments (0 to N-2).
+		for (let i = 0; i < tokens.length - 1; i++) {
+			const token = tokens[i]!;
+
+			const property: RdfProperty | undefined = parent.properties[token.name];
+			if (!property) {
+				throw new Error(
+					`Schema registered for prefix` +
+						` '${token.prefix}' has no property named` +
+						` '${token.name}'!`,
+				);
+			}
+
+			if (property.valueType.termType === 'Literal') {
+				throw new Error(
+					`Intermediate node '${token.prefix}:${token.name}' is a literal!`,
+				);
+			} else if (property.valueType.termType === 'Struct') {
+				subject = this.getStructure(subject, token.prefix, token.name);
+				parent = property.valueType;
+			} else {
+				const namespaceURI = this.namespaces[token.prefix];
+				if (typeof namespaceURI === 'undefined') {
+					throw new Error(
+						`Schema registered for prefix` +
+							` '${token.prefix}' has no property named` +
+							` '${token.name}'!`,
+					);
+				}
+				const node = rdflib.sym(`${namespaceURI}${token.name}`);
+				const { container } = this.getContainer(subject, node, token, property);
+
+				subject = container;
+				if (
+					'itemType' in property.valueType &&
+					property.valueType.itemType.termType === 'Struct'
+				) {
+					parent = property.valueType.itemType as RdfStruct;
+				}
+			}
+		}
+
+		// Resolve and validate the final leaf property on the parent
+		// struct/schema.
+		const lastToken = tokens[tokens.length - 1]!;
+		const leafProperty = parent.properties[lastToken.name];
+		if (!leafProperty) {
+			throw new Error(
+				`Schema registered for prefix` +
+					` '${lastToken.prefix}' has no property named` +
+					` '${lastToken.name}'!`,
+			);
+		}
+
+		return [subject, leafProperty];
+	}
+
 	private setLiteralMetaInfo(
-		subject: rdflib.NamedNode,
+		subject: rdflib.NamedNode | rdflib.BlankNode,
 		predicate: rdflib.NamedNode,
 		value: string,
 		options: XMPSetMetaInfoOptions,
 	) {
-		// 1. Remove existing triple(s) for this predicate (overwrite).
 		const existingQuads = this.kb.statementsMatching(subject, predicate, null);
 		if (existingQuads.length && options.noOverwrite) {
 			return;
@@ -431,32 +725,139 @@ ${output}</x:xmpmeta>
 
 		this.kb.removeStatements(existingQuads);
 
-		// 2. Add the new value
 		this.kb.add(subject, predicate, rdflib.literal(value));
 	}
 
-	private getContainer(
-		subject: rdflib.NamedNode,
+	private getLangAltContainer(
+		subject: rdflib.NamedNode | rdflib.BlankNode,
 		node: rdflib.NamedNode,
-		name: string,
-		listType: 'Bag' | 'Seq' | 'Alt',
 	): rdflib.NamedNode | rdflib.BlankNode {
+		const targetContainerType = RDF('Alt');
+
+		let container = this.kb.any(subject, node, null) as
+			| rdflib.NamedNode
+			| rdflib.BlankNode
+			| null;
+		if (container) {
+			const currentTypeNode = this.kb.any(container, RDF('type'), null);
+			if (!currentTypeNode?.equals(targetContainerType)) {
+				if (currentTypeNode) {
+					this.kb.removeMany(container, RDF('type'), null);
+				}
+				this.kb.add(container, RDF('type'), targetContainerType);
+			}
+
+			return container;
+		}
+
+		// Generate an anonymous, unique blank node to avoid graph node
+		// collisions.
+		container = rdflib.blankNode();
+		this.kb.add(container, RDF('type'), targetContainerType);
+		this.kb.add(subject, node, container);
+
+		return container;
+	}
+
+	private getContainer(
+		subject: rdflib.NamedNode | rdflib.BlankNode,
+		node: rdflib.NamedNode,
+		token: PathToken,
+		property: RdfProperty,
+	): { container: rdflib.NamedNode | rdflib.BlankNode; index: number } {
+		let currentType: RdfValueType = property.valueType;
+		const targetContainerType = RDF(currentType.termType);
+
+		// 1. Get or auto-vivify the primary container on the subject.
 		let container = this.kb.any(subject, node, null) as
 			| rdflib.NamedNode
 			| rdflib.BlankNode
 			| null;
 
-		if (container) return container;
+		if (container) {
+			const currentTypeNode = this.kb.any(container, RDF('type'), null);
+			if (!currentTypeNode?.equals(targetContainerType)) {
+				if (currentTypeNode) {
+					this.kb.removeMany(container, RDF('type'), null);
+				}
+				this.kb.add(container, RDF('type'), targetContainerType);
+			}
+		} else {
+			container = rdflib.blankNode(token.name);
+			this.kb.add(container, RDF('type'), targetContainerType);
+			this.kb.add(subject, node, container);
+		}
 
-		container = rdflib.blankNode(name);
-		this.kb.add(
-			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}type`),
-			rdflib.sym(`${XmpDocument.NS_RDF}${listType}`),
-		);
-		this.kb.add(subject, node, container);
+		const indices = token.indices ?? [];
+		if (indices.length === 0) {
+			return { container, index: this.getNextIndex(container) };
+		}
 
-		return container;
+		// 2. Traverse / auto-vivify intermediate container levels (0 to N-2).
+		for (let i = 0; i < indices.length - 1; i++) {
+			const reqIndex = indices[i];
+			const resolvedIndex =
+				!reqIndex || reqIndex < 1 ? this.getNextIndex(container) : reqIndex;
+
+			const itemPredicate = RDF(`_${resolvedIndex}`);
+
+			if ('itemType' in currentType) {
+				currentType = (currentType as any).itemType;
+			} else {
+				throw new Error(
+					`Type '${currentType.termType}' cannot be indexed as a container.`,
+				);
+			}
+
+			let nextContainer = this.kb.any(container, itemPredicate, null) as
+				| rdflib.NamedNode
+				| rdflib.BlankNode
+				| null;
+
+			const nextContainerType = RDF(currentType.termType);
+
+			if (nextContainer) {
+				const existingType = this.kb.any(nextContainer, RDF('type'), null);
+				if (!existingType?.equals(nextContainerType)) {
+					if (existingType) {
+						this.kb.removeMany(nextContainer, RDF('type'), null);
+					}
+					this.kb.add(nextContainer, RDF('type'), nextContainerType);
+				}
+			} else {
+				nextContainer = rdflib.blankNode();
+				this.kb.add(nextContainer, RDF('type'), nextContainerType);
+				this.kb.add(container, itemPredicate, nextContainer);
+			}
+
+			container = nextContainer;
+		}
+
+		// 3. Resolve the target index inside the innermost container.
+		const lastReqIndex = indices[indices.length - 1];
+		const finalIndex =
+			!lastReqIndex || lastReqIndex < 1
+				? this.getNextIndex(container)
+				: lastReqIndex;
+
+		return { container, index: finalIndex };
+	}
+
+	private getNextIndex(container: rdflib.NamedNode | rdflib.BlankNode): number {
+		const statements = this.kb.statementsMatching(container, null, null);
+		let maxIndex = 0;
+		const prefix = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#_';
+
+		for (const stmt of statements) {
+			const uri = stmt.predicate.value;
+			if (uri.startsWith(prefix)) {
+				const idx = parseInt(uri.slice(prefix.length), 10);
+				if (!Number.isNaN(idx) && idx > maxIndex) {
+					maxIndex = idx;
+				}
+			}
+		}
+		return maxIndex + 1;
 	}
 
 	private getListItemIndices(
@@ -467,7 +868,7 @@ ${output}</x:xmpmeta>
 
 		return this.kb.statementsMatching(container, null, null).flatMap((stmt) => {
 			const match = stmt.predicate.value.match(RDF_LI_REGEX);
-			return match ? [parseInt(match[1]!, 10) - 1] : [];
+			return match ? [parseInt(match[1]!, 10)] : [];
 		});
 	}
 
@@ -483,18 +884,45 @@ ${output}</x:xmpmeta>
 
 		if (!options.append) {
 			this.clearContainerItems(container);
-		} else {
 			existing = [];
 		}
 
-		const highest = existing.length ? Math.max(...existing) : -1;
+		const highest = existing.length ? Math.max(...existing) : 0;
 
-		const rdfIndex = highest + 2;
-		this.kb.add(
-			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`),
-			rdflib.literal(value),
-		);
+		const rdfIndex = highest + 1;
+		this.kb.add(container, RDF(`_${rdfIndex}`), rdflib.literal(value));
+	}
+
+	private setIndexedListItem(
+		container: rdflib.NamedNode | rdflib.BlankNode,
+		rdfIndex: number,
+		value: string,
+		options: XMPSetMetaInfoOptions,
+	) {
+		const existing = this.getListItemIndices(container);
+		const highest = existing.length ? Math.max(...existing) : 0;
+		if (rdfIndex - highest > 1) {
+			throw new RangeError(`Index '${rdfIndex}' out of range!`);
+		}
+
+		const predicate = RDF(`_${rdfIndex}`);
+
+		if (rdfIndex <= highest) {
+			if (options.noOverwrite) {
+				return;
+			}
+
+			const statement = this.kb.anyStatementMatching(
+				container,
+				predicate,
+				null,
+			);
+			if (statement) {
+				this.kb.remove(statement);
+			}
+		}
+
+		this.kb.add(container, predicate, rdflib.literal(value));
 	}
 
 	private setLanguageAlternative(
@@ -549,7 +977,7 @@ ${output}</x:xmpmeta>
 
 		this.kb.add(
 			container,
-			rdflib.sym(`${XmpDocument.NS_RDF}_${rdfIndex}`),
+			rdflib.sym(`${NS_RDF}_${rdfIndex}`),
 			rdflib.literal(value, lang),
 		);
 	}
@@ -557,8 +985,8 @@ ${output}</x:xmpmeta>
 	private clearContainerItems(
 		container: rdflib.NamedNode | rdflib.BlankNode,
 	): void {
-		const RDF_LI_PREFIX = `${XmpDocument.NS_RDF}_`;
-		const RDF_LI = `${XmpDocument.NS_RDF}li`;
+		const RDF_LI_PREFIX = `${NS_RDF}_`;
+		const RDF_LI = `${NS_RDF}li`;
 
 		// Find all triples where container is the subject and predicate is an item index
 		const itemStatements = this.kb
@@ -604,5 +1032,86 @@ ${output}</x:xmpmeta>
 		}
 
 		return statements;
+	}
+
+	private getStructure(
+		parent: rdflib.NamedNode | rdflib.BlankNode,
+		prefix: string,
+		name: string,
+	): rdflib.BlankNode {
+		const namespaceURI = this.namespaces[prefix];
+		if (!namespaceURI) {
+			throw new Error(`No schema registered for prefix '${prefix}'.`);
+		}
+
+		const predicate = rdflib.sym(`${namespaceURI}${name}`);
+		const existing = this.kb.any(parent, predicate, null);
+
+		if (
+			existing &&
+			(existing.termType === 'BlankNode' || existing.termType === 'NamedNode')
+		) {
+			this.kb.removeMany(existing as rdflib.NamedNode, RDF('type'), null);
+			return existing as rdflib.BlankNode;
+		}
+
+		if (existing) {
+			this.kb.removeMany(parent, predicate, null);
+		}
+
+		const structNode = rdflib.blankNode();
+		this.kb.add(parent, predicate, structNode);
+
+		return structNode;
+	}
+
+	private sanitizeRdfXml(xmlString: string): string {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(xmlString, 'text/xml');
+
+		const allElements = Array.from(doc.getElementsByTagName('*'));
+
+		for (const el of allElements) {
+			const hasParseType =
+				el.getAttributeNS(NS_RDF, 'parseType') === 'Resource' ||
+				el.getAttribute('rdf:parseType') === 'Resource';
+
+			if (!hasParseType) continue;
+
+			const childElements = Array.from(el.childNodes).filter(
+				(node): node is Element => node.nodeType === 1,
+			);
+
+			// Fix 1: Remove invalid parseType="Resource" from container
+			// parents (Alt/Bag/Seq).
+			const hasContainer = childElements.some(
+				(child) =>
+					child.namespaceURI === NS_RDF &&
+					child.localName &&
+					['Alt', 'Bag', 'Seq'].includes(child.localName),
+			);
+			if (hasContainer) {
+				el.removeAttributeNS(NS_RDF, 'parseType');
+				el.removeAttribute('rdf:parseType');
+				continue;
+			}
+
+			// Fix 2: Unwrap redundant <rdf:Description> inside
+			// parseType="Resource".
+			const descNode = childElements.find(
+				(child) =>
+					child.namespaceURI === NS_RDF && child.localName === 'Description',
+			);
+
+			if (descNode) {
+				// Hoist all children out of <rdf:Description> into the outer element
+				while (descNode.firstChild) {
+					el.insertBefore(descNode.firstChild, descNode);
+				}
+				el.removeChild(descNode);
+			}
+		}
+
+		return new XMLSerializer().serializeToString(doc);
 	}
 }

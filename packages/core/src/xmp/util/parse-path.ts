@@ -4,7 +4,7 @@ export interface PathToken {
 	prefix: string;
 	name: string;
 	lang?: string;
-	index?: number;
+	indices?: (number | '')[];
 }
 
 /** @internal */
@@ -15,22 +15,25 @@ export function parsePath(path: string): PathToken[] {
 
 	let parentPrefix = '';
 	parts.forEach((part) => {
-		let index: number | undefined;
-		const indexMatch = part.match(/\[(.*)\]/);
-		if (indexMatch) {
+		let indices: (number | '')[] | undefined;
+		let indexMatch = part.match(/\[([^[\]]*)\]$/);
+		while (indexMatch) {
+			indices ??= [];
 			part = part.substring(0, indexMatch.index);
 			if (!indexMatch[1]) {
-				throw new Error("Empty index '[]' is not allowed!");
-			} else if (indexMatch[1].match(/^[0-9]+$/)) {
-				index = parseInt(indexMatch[1], 10) - 1;
-				if (index < 0) {
+				indices.unshift('');
+			} else if (indexMatch[1].match(/^[-+]?[0-9]+$/)) {
+				const index = parseInt(indexMatch[1], 10);
+				if (index === 0) {
 					throw new Error(
 						'XMP paths are 1-based, 0 is not allowed as an index!',
 					);
 				}
+				indices.unshift(index);
 			} else {
 				throw new Error(`Invalid index '${indexMatch[1]}'`);
 			}
+			indexMatch = part.match(/\[(.*)\]$/);
 		}
 
 		const langMatch = part.match(/@(.*)/);
@@ -63,8 +66,8 @@ export function parsePath(path: string): PathToken[] {
 		}
 
 		const token: PathToken = { prefix: prefix!, name: name! };
-		if (typeof index !== 'undefined') {
-			token.index = index;
+		if (typeof indices !== 'undefined') {
+			token.indices = indices;
 		}
 
 		if (typeof lang !== 'undefined') {
@@ -76,13 +79,6 @@ export function parsePath(path: string): PathToken[] {
 
 	if (!tokens.length) {
 		throw new Error('Empty paths are not allowed!');
-	}
-
-	const lastToken = tokens[tokens.length - 1];
-	if (typeof lastToken?.index !== 'undefined') {
-		throw new Error(
-			`Index [${tokens[tokens.length - 1]!.index}] is not allowed for leaf nodes.`,
-		);
 	}
 
 	return tokens;

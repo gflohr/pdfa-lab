@@ -29,14 +29,16 @@ pnpm build                      # Build for publishing (all packages)
 ### General
 
 - **ESM with `.js` extensions** in imports
-- **`type` over `interface`** for object shapes without any methods
+- **`interface` over `type`** where possible
 - **JSDoc required** on exported functions (first overload only for overload sets)
 - **`// @__NO_SIDE_EFFECTS__`** before pure factory functions for tree-shaking
 - **Tabs for indentation, spaces for formatting**
 
 ### `type` vs `interface`
 
-When in doubt, prefer `interface` over `type`. Rationale: Interfaces offer better compiler performance and allow downstream consumers to extend definitions via declaration merging.
+When in doubt, prefer `interface` over `type`. Rationale: Interfaces offer
+better compiler performance and allow downstream consumers to extend
+definitions via declaration merging.
 
 Use `type`:
 
