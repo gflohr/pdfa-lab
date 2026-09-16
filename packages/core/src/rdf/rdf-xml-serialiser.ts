@@ -9,6 +9,8 @@ import formatXML from 'xml-formatter';
 import { NS_RDF } from '../xmp/xmp-document.js';
 
 const NS_XML = 'http://www.w3.org/2000/xmlns/';
+const XSD_STRING = 'http://www.w3.org/2001/XMLSchema#string';
+const RDF_LANG_STRING = `${NS_RDF}langString`;
 
 interface XmpProperty {
 	prefix: string;
@@ -18,7 +20,7 @@ interface XmpProperty {
 }
 
 type RdfValue =
-	| { type: 'Literal'; value: string; lang?: string }
+	| { type: 'Literal'; value: string; lang?: string; datatype?: string }
 	| { type: 'Struct'; properties: XmpProperty[] }
 	| { type: 'Bag' | 'Seq' | 'Alt'; items: RdfValue[] }
 	| { type: 'Resource'; uri: string };
@@ -85,6 +87,8 @@ export class RdfXmlSerialiser {
 			case 'Literal':
 				if (typeof value.lang === 'string') {
 					parentEl.setAttribute('xml:lang', value.lang);
+				} else if (value.datatype) {
+					parentEl.setAttributeNS(NS_RDF, 'rdf:datatype', value.datatype);
 				}
 				parentEl.appendChild(doc.createTextNode(value.value));
 				break;
@@ -194,7 +198,22 @@ export class RdfXmlSerialiser {
 		// 1. Literal node
 		if (node.termType === 'Literal') {
 			const lang = node.language === '' ? undefined : node.language;
-			return { type: 'Literal', value: node.value, lang };
+
+			let datatype: string | undefined;
+			if (
+				node.datatype &&
+				node.datatype.value !== XSD_STRING &&
+				node.datatype.value !== RDF_LANG_STRING
+			) {
+				datatype = node.datatype.value;
+			}
+
+			return {
+				type: 'Literal',
+				value: node.value,
+				lang,
+				...(datatype ? { datatype } : {}),
+			};
 		}
 
 		// 2. Resource / NamedNode reference (e.g. rdf:type targets)

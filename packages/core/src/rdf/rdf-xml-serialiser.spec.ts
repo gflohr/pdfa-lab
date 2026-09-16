@@ -194,4 +194,66 @@ describe('RdfXmlSerialiser', () => {
 
 		expect(xml).toContain(`rdf:resource="${NS_EXCS}"`);
 	});
+
+	it('preserves explicit rdf:datatype while omitting implicit string and language datatypes', async () => {
+		const XSD_NS = 'http://www.w3.org/2001/XMLSchema#';
+		const XMP_NS = 'http://ns.adobe.com/xap/1.0/';
+
+		const xsdDateTime = rdflib.sym(`${XSD_NS}dateTime`);
+		const xsdInteger = rdflib.sym(`${XSD_NS}integer`);
+
+		// 1. Explicit datatype (xsd:dateTime)
+		store.add(
+			docSubject,
+			rdflib.sym(`${XMP_NS}CreateDate`),
+			rdflib.literal('2026-09-16T20:30:00Z', xsdDateTime),
+		);
+
+		// 2. Explicit datatype (xsd:integer)
+		store.add(
+			docSubject,
+			rdflib.sym(`${XMP_NS}Rating`),
+			rdflib.literal('5', xsdInteger),
+		);
+
+		// 3. Plain literal (implicit xsd:string -> should NOT emit rdf:datatype)
+		store.add(
+			docSubject,
+			rdflib.sym(`${XMP_NS}CreatorTool`),
+			rdflib.literal('pdfa-lab core'),
+		);
+
+		// 4. Language-tagged literal (implicit rdf:langString -> should emit xml:lang, NOT rdf:datatype)
+		store.add(
+			docSubject,
+			rdflib.sym(`${DC_NS}title`),
+			rdflib.literal('English Title', 'en-US'),
+		);
+
+		const xml = serialiser.serialise(store, {
+			...prefixMap,
+			[XMP_NS]: 'xmp',
+			[XSD_NS]: 'xsd',
+		});
+
+		// Explicit datatypes must be emitted as rdf:datatype attributes
+		expect(xml).toContain(
+			'<xmp:CreateDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-09-16T20:30:00Z</xmp:CreateDate>',
+		);
+		expect(xml).toContain(
+			'<xmp:Rating rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">5</xmp:Rating>',
+		);
+
+		// Plain string must not carry rdf:datatype="...#string"
+		expect(xml).toContain('<xmp:CreatorTool>pdfa-lab core</xmp:CreatorTool>');
+		expect(xml).not.toContain('XMLSchema#string');
+
+		// Language-tagged literal must carry xml:lang but not rdf:datatype="...#langString"
+		expect(xml).toContain(
+			'<dc:title xml:lang="en-US">English Title</dc:title>',
+		);
+		expect(xml).not.toContain('langString');
+
+		await expect(xml).toMatchFileSnapshot('./__snapshots__/typed-literals.xml');
+	});
 });
