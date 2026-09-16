@@ -472,7 +472,9 @@ describe('XMP document', () => {
 			expect(xmp).toContain('<rdf:Bag>');
 			expect(xmp).toContain('<rdf:Seq>');
 			expect(xmp).toContain('<rdf:li>findme</rdf:li>');
-			await expect(xmp).toMatchFileSnapshot('./__snapshots__/bag-of-seq-1-1.xml');
+			await expect(xmp).toMatchFileSnapshot(
+				'./__snapshots__/bag-of-seq-1-1.xml',
+			);
 		});
 	});
 

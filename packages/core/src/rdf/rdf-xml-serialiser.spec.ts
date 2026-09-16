@@ -39,9 +39,7 @@ describe('RdfXmlSerialiser', () => {
 
 		const xml = serialiser.serialise(store, prefixMap);
 
-		expect(xml).toContain(
-			'xmlns:dc="http://purl.org/dc/elements/1.1/',
-		);
+		expect(xml).toContain('xmlns:dc="http://purl.org/dc/elements/1.1/');
 		expect(xml).toContain('<rdf:Description rdf:about="">');
 		expect(xml).toContain('<dc:title>Sample Document</dc:title>');
 		expect(xml).toContain('<dc:format>application/pdf</dc:format>');
@@ -143,24 +141,57 @@ describe('RdfXmlSerialiser', () => {
 		);
 	});
 
-
 	it('serialises language alternatives', async () => {
 		const bagNode = rdflib.blankNode();
 		store.add(docSubject, rdflib.sym(`${DC_NS}subject`), bagNode);
 		store.add(bagNode, rdflib.sym(`${RDF_NS}type`), rdflib.sym(`${RDF_NS}Alt`));
 
-		store.add(bagNode, rdflib.sym(`${RDF_NS}_1`), rdflib.literal('Les misérables', 'x-default'));
-		store.add(bagNode, rdflib.sym(`${RDF_NS}_2`), rdflib.literal('Les misérables', 'fr-FR'));
-		store.add(bagNode, rdflib.sym(`${RDF_NS}_3`), rdflib.literal('Die Elenden', 'de-DE'));
+		store.add(
+			bagNode,
+			rdflib.sym(`${RDF_NS}_1`),
+			rdflib.literal('Les misérables', 'x-default'),
+		);
+		store.add(
+			bagNode,
+			rdflib.sym(`${RDF_NS}_2`),
+			rdflib.literal('Les misérables', 'fr-FR'),
+		);
+		store.add(
+			bagNode,
+			rdflib.sym(`${RDF_NS}_3`),
+			rdflib.literal('Die Elenden', 'de-DE'),
+		);
 
 		const xml = serialiser.serialise(store, prefixMap);
 
 		expect(xml).toContain('<dc:subject>');
 		expect(xml).toContain('<rdf:Alt>');
-		expect(xml).toContain('<rdf:li xml:lang="x-default">Les misérables</rdf:li>');
+		expect(xml).toContain(
+			'<rdf:li xml:lang="x-default">Les misérables</rdf:li>',
+		);
 		expect(xml).toContain('<rdf:li xml:lang="fr-FR">Les misérables</rdf:li>');
 		expect(xml).toContain('<rdf:li xml:lang="de-DE">Die Elenden</rdf:li>');
 
-		await expect(xml).toMatchFileSnapshot('./__snapshots__/container-lang-alt.xml');
+		await expect(xml).toMatchFileSnapshot(
+			'./__snapshots__/container-lang-alt.xml',
+		);
+	});
+
+	it('preserves non-container rdf:type assertions on structs', () => {
+		const structNode = rdflib.blankNode();
+		const NS_EXCS = 'http://example.org/ns#CustomSchema';
+		const customType = rdflib.sym(NS_EXCS);
+
+		store.add(docSubject, rdflib.sym(`${DC_NS}publisher`), structNode);
+		// Explicit non-container rdf:type assertion.
+		store.add(structNode, rdflib.sym(`${RDF_NS}type`), customType);
+		store.add(structNode, rdflib.sym(`${DC_NS}name`), rdflib.literal('Acme'));
+
+		const xml = serialiser.serialise(store, {
+			...prefixMap,
+			[NS_EXCS]: 'excs',
+		});
+
+		expect(xml).toContain(`rdf:resource="${NS_EXCS}"`);
 	});
 });

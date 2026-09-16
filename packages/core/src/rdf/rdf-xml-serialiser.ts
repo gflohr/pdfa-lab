@@ -20,7 +20,14 @@ interface XmpProperty {
 type RdfValue =
 	| { type: 'Literal'; value: string; lang?: string }
 	| { type: 'Struct'; properties: XmpProperty[] }
-	| { type: 'Bag' | 'Seq' | 'Alt'; items: RdfValue[] };
+	| { type: 'Bag' | 'Seq' | 'Alt'; items: RdfValue[] }
+	| { type: 'Resource'; uri: string };
+
+const RDF_CONTAINER_TYPES = new Set([
+	`${NS_RDF}Alt`,
+	`${NS_RDF}Bag`,
+	`${NS_RDF}Seq`,
+]);
 
 /** @internal */
 export class RdfXmlSerialiser {
@@ -31,7 +38,10 @@ export class RdfXmlSerialiser {
 		prefixMap: Record<string, string>,
 	): string {
 		const subject = rdflib.sym(this.baseIRI);
-		const properties = this.extractXmpProperties(store, subject, prefixMap);
+		const properties = this.extractXmpProperties(store, subject, {
+			[NS_RDF]: 'rdf',
+			...prefixMap,
+		});
 
 		const aboutUri = '';
 		const impl = new DOMImplementation();
@@ -118,6 +128,10 @@ export class RdfXmlSerialiser {
 				parentEl.appendChild(container);
 				break;
 			}
+
+			case 'Resource':
+				parentEl.setAttributeNS(NS_RDF, 'rdf:resource', value.uri);
+				break;
 		}
 	}
 
@@ -128,11 +142,7 @@ export class RdfXmlSerialiser {
 	): void {
 		const xmlnsAttr = `xmlns:${prefix}`;
 		if (!rootNode.hasAttribute(xmlnsAttr)) {
-			rootNode.setAttributeNS(
-				NS_XML,
-				xmlnsAttr,
-				namespaceUri,
-			);
+			rootNode.setAttributeNS(NS_XML, xmlnsAttr, namespaceUri);
 		}
 	}
 
@@ -151,7 +161,10 @@ export class RdfXmlSerialiser {
 			const predUri = stmt.predicate.value;
 
 			// Skip internal rdf:type predicate on the property list
-			if (predUri === `${NS_RDF}type`) {
+			if (
+				predUri === `${NS_RDF}type` &&
+				RDF_CONTAINER_TYPES.has(stmt.object.value)
+			) {
 				continue;
 			}
 
@@ -184,7 +197,12 @@ export class RdfXmlSerialiser {
 			return { type: 'Literal', value: node.value, lang };
 		}
 
-		// 2. Container check (Bag, Seq, Alt)
+		// 2. Resource / NamedNode reference (e.g. rdf:type targets)
+		if (node.termType === 'NamedNode') {
+			return { type: 'Resource', uri: node.value };
+		}
+
+		// 3. Container check (Bag, Seq, Alt)
 		const typeNode = kb.any(node, rdflib.sym(`${NS_RDF}type`), null);
 		const typeUri = typeNode?.value;
 
@@ -224,10 +242,10 @@ export class RdfXmlSerialiser {
 			};
 		}
 
-		// 3. Struct node (fallback for any node containing child properties)
+		// 4. Struct node (fallback for any node containing child properties)
 		const structProperties = this.extractXmpProperties(
 			kb,
-			node as rdflib.NamedNode,
+			node as unknown as rdflib.NamedNode,
 			prefixMap,
 		);
 		return {
