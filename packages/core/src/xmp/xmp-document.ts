@@ -612,6 +612,13 @@ ${output}</x:xmpmeta>
 				property,
 			);
 
+			if (options.noOverwrite) {
+				const existing = this.getListItemIndices(container);
+				if (existing.length) {
+					return;
+				}
+			}
+
 			// If no indices were given, we always overwrite all existing values.
 			if (!token.indices && !options.append) {
 				this.clearContainerItems(container);
