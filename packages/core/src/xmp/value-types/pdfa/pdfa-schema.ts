@@ -5,6 +5,7 @@ import {
 } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpURI } from '../core/derived/uri.js';
+import { pdfaProperty } from './pdfa-property.js';
 import { pdfaValueType } from './pdfa-value-type.js';
 
 /**
@@ -54,9 +55,7 @@ export const pdfaSchema: RdfStruct = {
 		 * prefixes.
 		 */
 		property: {
-			// FIXME! This must be a pdfaPropertySchema!
-			//valueType: rdfSeq(pdfaPropertySchema),
-			valueType: rdfSeq<RdfLiteral>(xmpText),
+			valueType: rdfSeq(pdfaProperty),
 		},
 
 		/**
