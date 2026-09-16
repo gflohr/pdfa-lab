@@ -12,13 +12,13 @@ import type {
 	RdfStruct,
 	RdfValueType,
 } from '../rdf/rdf-schema.js';
+import { RdfXmlSerialiser } from '../rdf/rdf-xml-serialiser.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
 import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
 import { type PathToken, parsePath } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
-import { RdfXmlSerialiser } from '../rdf/rdf-xml-serialiser.js';
 
 /**
  * Default base IRI.
@@ -113,7 +113,7 @@ export class XmpDocument {
 	private schemas: Record<string, XmpSchema> = {};
 	private namespaces: Record<string, string> = {
 		// FIXME! This will be redundant, when the PDF schema is added.
-		'pdf': 'http://ns.adobe.com/pdf/1.3/',
+		pdf: 'http://ns.adobe.com/pdf/1.3/',
 	};
 
 	constructor(
@@ -1068,55 +1068,5 @@ ${output}</x:xmpmeta>
 		this.kb.add(parent, predicate, structNode);
 
 		return structNode;
-	}
-
-	private sanitizeRdfXml(xmlString: string): string {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(xmlString, 'text/xml');
-
-		const allElements = Array.from(doc.getElementsByTagName('*'));
-
-		for (const el of allElements) {
-			const hasParseType =
-				el.getAttributeNS(NS_RDF, 'parseType') === 'Resource' ||
-				el.getAttribute('rdf:parseType') === 'Resource';
-
-			if (!hasParseType) continue;
-
-			const childElements = Array.from(el.childNodes).filter(
-				(node): node is Element => node.nodeType === 1,
-			);
-
-			// Fix 1: Remove invalid parseType="Resource" from container
-			// parents (Alt/Bag/Seq).
-			const hasContainer = childElements.some(
-				(child) =>
-					child.namespaceURI === NS_RDF &&
-					child.localName &&
-					['Alt', 'Bag', 'Seq'].includes(child.localName),
-			);
-			if (hasContainer) {
-				el.removeAttributeNS(NS_RDF, 'parseType');
-				el.removeAttribute('rdf:parseType');
-				continue;
-			}
-
-			// Fix 2: Unwrap redundant <rdf:Description> inside
-			// parseType="Resource".
-			const descNode = childElements.find(
-				(child) =>
-					child.namespaceURI === NS_RDF && child.localName === 'Description',
-			);
-
-			if (descNode) {
-				// Hoist all children out of <rdf:Description> into the outer element
-				while (descNode.firstChild) {
-					el.insertBefore(descNode.firstChild, descNode);
-				}
-				el.removeChild(descNode);
-			}
-		}
-
-		return new XMLSerializer().serializeToString(doc);
 	}
 }
