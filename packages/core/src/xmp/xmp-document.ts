@@ -7,11 +7,10 @@ import {
 } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import type { PredicateType, SubjectType } from 'rdflib/lib/types.js';
-import {
-	type RdfProperty,
-	type RdfStruct,
-	type RdfValueType,
-	rdfLiteral,
+import type {
+	RdfProperty,
+	RdfStruct,
+	RdfValueType,
 } from '../rdf/rdf-schema.js';
 import { dublinCoreSchema } from './schemas/dublin-core.js';
 import { pdfaExtensionSchema } from './schemas/pdfa-extension.js';
@@ -98,7 +97,8 @@ export interface XMPSetMetaInfoOptions {
 
 const bom = '\uFEFF';
 
-const NS_RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+/** @internal */
+export const NS_RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 
 const RDF = rdflib.Namespace(NS_RDF);
 
@@ -802,7 +802,7 @@ ${output}</x:xmpmeta>
 			const itemPredicate = RDF(`_${resolvedIndex}`);
 
 			if ('itemType' in currentType) {
-				currentType = (currentType as any).itemType;
+				currentType = currentType.itemType;
 			} else {
 				throw new Error(
 					`Type '${currentType.termType}' cannot be indexed as a container.`,
