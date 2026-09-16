@@ -108,7 +108,8 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 
-			expect(xmp).toContain('<rdf:Seq><rdf:li>Jane Doe</rdf:li></rdf:Seq>');
+			expect(xmp).toContain('<rdf:Seq>');
+			expect(xmp).toContain('<rdf:li>Jane Doe</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot('./__snapshots__/simple-seq.xml');
 		});
 
@@ -120,7 +121,9 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 
-			expect(xmp).toContain('<rdf:Seq><rdf:li>Jane Doe</rdf:li></rdf:Seq>');
+			expect(xmp).toContain('<rdf:Seq>');
+			expect(xmp).toContain('<rdf:li>Jane Doe</rdf:li>');
+			expect(xmp).not.toContain('<rdf:li>John Doe</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot('./__snapshots__/simple-seq.xml');
 		});
 
@@ -132,9 +135,9 @@ describe('XMP document', () => {
 
 			const xmp = xmpDoc.serialiseXmp();
 
-			expect(xmp).toContain(
-				'<rdf:Seq><rdf:li>John Doe</rdf:li><rdf:li>Jane Doe</rdf:li></rdf:Seq>',
-			);
+			expect(xmp).toContain('<rdf:Seq>');
+			expect(xmp).toContain('<rdf:li>John Doe</rdf:li>');
+			expect(xmp).toContain('<rdf:li>Jane Doe</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot('./__snapshots__/2-item-seq.xml');
 		});
 
@@ -241,7 +244,8 @@ describe('XMP document', () => {
 			xmpDoc.setMetaInfo('dc:subject[2]', 'two');
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
+			expect(xmp).toContain('<rdf:li>one</rdf:li>');
+			expect(xmp).toContain('<rdf:li>two</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot(
 				'./__snapshots__/dc-subject-one-two.xml',
 			);
@@ -256,8 +260,10 @@ describe('XMP document', () => {
 			xmpDoc.setMetaInfo('dc:subject[2]', 'kaksi');
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).not.toContain('<rdf:li>one</rdf:li><rdf:li>two</rdf:li>');
-			expect(xmp).toContain('<rdf:li>yksi</rdf:li><rdf:li>kaksi</rdf:li>');
+			expect(xmp).not.toContain('<rdf:li>one</rdf:li>');
+			expect(xmp).not.toContain('<rdf:li>two</rdf:li>');
+			expect(xmp).toContain('<rdf:li>yksi</rdf:li>');
+			expect(xmp).toContain('<rdf:li>kaksi</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot(
 				'./__snapshots__/dc-subject-yksi-kaksi.xml',
 			);
@@ -283,9 +289,9 @@ describe('XMP document', () => {
 			xmpDoc.setMetaInfo('dc:subject[]', 'three');
 
 			const xmp = xmpDoc.serialiseXmp();
-			expect(xmp).toContain(
-				'<rdf:li>one</rdf:li><rdf:li>two</rdf:li><rdf:li>three</rdf:li>',
-			);
+			expect(xmp).toContain('<rdf:li>one</rdf:li>');
+			expect(xmp).toContain('<rdf:li>two</rdf:li>');
+			expect(xmp).toContain('<rdf:li>three</rdf:li>');
 			await expect(xmp).toMatchFileSnapshot(
 				'./__snapshots__/dc-subject-one-two-three.xml',
 			);

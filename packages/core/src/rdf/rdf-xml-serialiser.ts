@@ -8,6 +8,8 @@ import * as rdflib from 'rdflib';
 import formatXML from 'xml-formatter';
 import { NS_RDF } from '../xmp/xmp-document.js';
 
+const NS_XML = 'http://www.w3.org/2000/xmlns/';
+
 interface XmpProperty {
 	prefix: string;
 	namespaceUri: string;
@@ -16,7 +18,7 @@ interface XmpProperty {
 }
 
 type RdfValue =
-	| { type: 'Literal'; value: string }
+	| { type: 'Literal'; value: string; lang?: string }
 	| { type: 'Struct'; properties: XmpProperty[] }
 	| { type: 'Bag' | 'Seq' | 'Alt'; items: RdfValue[] };
 
@@ -71,6 +73,9 @@ export class RdfXmlSerialiser {
 	): void {
 		switch (value.type) {
 			case 'Literal':
+				if (typeof value.lang === 'string') {
+					parentEl.setAttribute('xml:lang', value.lang);
+				}
 				parentEl.appendChild(doc.createTextNode(value.value));
 				break;
 
@@ -124,7 +129,7 @@ export class RdfXmlSerialiser {
 		const xmlnsAttr = `xmlns:${prefix}`;
 		if (!rootNode.hasAttribute(xmlnsAttr)) {
 			rootNode.setAttributeNS(
-				'http://www.w3.org/2000/xmlns/',
+				NS_XML,
 				xmlnsAttr,
 				namespaceUri,
 			);
@@ -175,7 +180,8 @@ export class RdfXmlSerialiser {
 	): RdfValue {
 		// 1. Literal node
 		if (node.termType === 'Literal') {
-			return { type: 'Literal', value: node.value };
+			const lang = node.language === '' ? undefined : node.language;
+			return { type: 'Literal', value: node.value, lang };
 		}
 
 		// 2. Container check (Bag, Seq, Alt)
@@ -237,6 +243,11 @@ export class RdfXmlSerialiser {
 		// 1. Check against explicitly registered prefix map (namespaceUri -> prefix)
 		for (const [nsUri, prefix] of Object.entries(prefixMap)) {
 			if (uri.startsWith(nsUri)) {
+				const name = uri.slice(nsUri.length);
+				if (name.includes('/') || name.includes('#')) {
+					continue;
+				}
+
 				return {
 					namespaceUri: nsUri,
 					name: uri.slice(nsUri.length),

@@ -18,6 +18,7 @@ import { xmpSchema } from './schemas/xmp.js';
 import { xmpMediaManagementSchema } from './schemas/xmp-media-management.js';
 import { type PathToken, parsePath } from './util/parse-path.js';
 import type { XmpSchema } from './xmp-schema.js';
+import { RdfXmlSerialiser } from '../rdf/rdf-xml-serialiser.js';
 
 /**
  * Default base IRI.
@@ -110,7 +111,10 @@ export class XmpDocument {
 	private doc: Document;
 	private kb = rdflib.graph();
 	private schemas: Record<string, XmpSchema> = {};
-	private namespaces: Record<string, string> = {};
+	private namespaces: Record<string, string> = {
+		// FIXME! This will be redundant, when the PDF schema is added.
+		'pdf': 'http://ns.adobe.com/pdf/1.3/',
+	};
 
 	constructor(
 		xmlString?: string,
@@ -199,10 +203,16 @@ export class XmpDocument {
 		format: RdfSerialisationFormat = 'application/rdf+xml',
 		options: RdfSerialisationOptions = {},
 	): string {
-		const namespaces: Record<string, string> = {};
-		for (const prefix in this.schemas) {
-			const schema = this.schemas[prefix]!;
-			namespaces[prefix] = schema.namespaceURI;
+		// Workaround for https://github.com/linkeddata/rdflib.js/issues/869.
+		if (format === 'application/rdf+xml') {
+			const namespaceToPrefix: Record<string, string> = {};
+			for (const prefix in this.namespaces) {
+				namespaceToPrefix[this.namespaces[prefix]!] = prefix;
+			}
+
+			const serialiser = new RdfXmlSerialiser(this.baseIRI);
+
+			return serialiser.serialise(this.kb, namespaceToPrefix);
 		}
 
 		const output = rdflib.serialize(
@@ -211,15 +221,10 @@ export class XmpDocument {
 			this.baseIRI,
 			format,
 			undefined,
-			{ ...options, namespaces },
+			{ ...options, namespaces: this.namespaces },
 		);
 		if (!output) {
 			throw new Error(`Invalid output format '${format}'!`);
-		}
-
-		// Workaround for https://github.com/linkeddata/rdflib.js/issues/869.
-		if (format === 'application/rdf+xml') {
-			return this.sanitizeRdfXml(output);
 		}
 
 		return output;

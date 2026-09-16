@@ -142,4 +142,25 @@ describe('RdfXmlSerialiser', () => {
 			'./__snapshots__/unregistered-prefix.xml',
 		);
 	});
+
+
+	it('serialises language alternatives', async () => {
+		const bagNode = rdflib.blankNode();
+		store.add(docSubject, rdflib.sym(`${DC_NS}subject`), bagNode);
+		store.add(bagNode, rdflib.sym(`${RDF_NS}type`), rdflib.sym(`${RDF_NS}Alt`));
+
+		store.add(bagNode, rdflib.sym(`${RDF_NS}_1`), rdflib.literal('Les misérables', 'x-default'));
+		store.add(bagNode, rdflib.sym(`${RDF_NS}_2`), rdflib.literal('Les misérables', 'fr-FR'));
+		store.add(bagNode, rdflib.sym(`${RDF_NS}_3`), rdflib.literal('Die Elenden', 'de-DE'));
+
+		const xml = serialiser.serialise(store, prefixMap);
+
+		expect(xml).toContain('<dc:subject>');
+		expect(xml).toContain('<rdf:Alt>');
+		expect(xml).toContain('<rdf:li xml:lang="x-default">Les misérables</rdf:li>');
+		expect(xml).toContain('<rdf:li xml:lang="fr-FR">Les misérables</rdf:li>');
+		expect(xml).toContain('<rdf:li xml:lang="de-DE">Die Elenden</rdf:li>');
+
+		await expect(xml).toMatchFileSnapshot('./__snapshots__/container-lang-alt.xml');
+	});
 });
