@@ -480,7 +480,7 @@ ${output}</x:xmpmeta>
 	 * The field identified by `path` must exist and be of type `Alt`.
 	 *
 	 * An untagged value (`xml:lang=""`) is interpreted as `x-default`, but
-	 * only if `x-default` is not explicitely set. If neither an value
+	 * only if `x-default` is not explicitely set.
 	 *
 	 * All language tags are normalised to lowercase.
 	 *
