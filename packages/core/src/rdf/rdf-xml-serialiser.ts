@@ -21,7 +21,7 @@ interface XmpProperty {
 
 type RdfValue =
 	| { type: 'Literal'; value: string; lang?: string; datatype?: string }
-	| { type: 'Struct'; properties: XmpProperty[] }
+	| { type: 'Struct'; nodeId?: string; properties: XmpProperty[] }
 	| {
 			type: 'Bag' | 'Seq' | 'Alt';
 			items: RdfValue[];
@@ -45,10 +45,17 @@ export class RdfXmlSerialiser {
 		prefixMap: Record<string, string>,
 	): string {
 		const subject = rdflib.sym(this.baseIRI);
-		const properties = this.extractXmpProperties(store, subject, {
-			[NS_RDF]: 'rdf',
-			...prefixMap,
-		});
+		const sharedNodeIds = this.findSharedBlankNodeIds(store);
+		const properties = this.extractXmpProperties(
+			store,
+			subject,
+			{
+				[NS_RDF]: 'rdf',
+				...prefixMap,
+			},
+			sharedNodeIds,
+			new Set<string>(),
+		);
 
 		const aboutUri = '';
 		const impl = new DOMImplementation();
@@ -108,15 +115,32 @@ export class RdfXmlSerialiser {
 				break;
 
 			case 'Struct':
-				parentEl.setAttributeNS(NS_RDF, 'rdf:parseType', 'Resource');
-				for (const prop of value.properties) {
-					this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
-					const propEl = doc.createElementNS(
-						prop.namespaceUri,
-						`${prop.prefix}:${prop.name}`,
-					);
-					this.appendRdfValue(doc, rootNode, propEl, prop.value);
-					parentEl.appendChild(propEl);
+				if (value.nodeId) {
+					// Shared / Cyclic node: use <rdf:Description rdf:nodeID="..."> inside property tag
+					const descEl = doc.createElementNS(NS_RDF, 'rdf:Description');
+					descEl.setAttributeNS(NS_RDF, 'rdf:nodeID', value.nodeId);
+					for (const prop of value.properties) {
+						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
+						const propEl = doc.createElementNS(
+							prop.namespaceUri,
+							`${prop.prefix}:${prop.name}`,
+						);
+						this.appendRdfValue(doc, rootNode, propEl, prop.value);
+						descEl.appendChild(propEl);
+					}
+					parentEl.appendChild(descEl);
+				} else {
+					// Uniquely referenced node: standard rdf:parseType="Resource"
+					parentEl.setAttributeNS(NS_RDF, 'rdf:parseType', 'Resource');
+					for (const prop of value.properties) {
+						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
+						const propEl = doc.createElementNS(
+							prop.namespaceUri,
+							`${prop.prefix}:${prop.name}`,
+						);
+						this.appendRdfValue(doc, rootNode, propEl, prop.value);
+						parentEl.appendChild(propEl);
+					}
 				}
 				break;
 
@@ -179,7 +203,8 @@ export class RdfXmlSerialiser {
 		kb: rdflib.IndexedFormula,
 		subject: rdflib.NamedNode | rdflib.BlankNode,
 		prefixMap: Record<string, string> = {},
-		visitedNodes: Set<string> = new Set(),
+		sharedNodeIds: Set<string>,
+		visitedNodes: Set<string>,
 	): XmpProperty[] {
 		const statements = kb.statementsMatching(subject, null, null);
 		const properties: XmpProperty[] = [];
@@ -200,6 +225,7 @@ export class RdfXmlSerialiser {
 				kb,
 				stmt.object as rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
 				prefixMap,
+				sharedNodeIds,
 				visitedNodes,
 			);
 
@@ -218,7 +244,8 @@ export class RdfXmlSerialiser {
 		kb: rdflib.IndexedFormula,
 		node: rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
 		prefixMap: Record<string, string>,
-		visitedNodes: Set<string> = new Set(),
+		sharedNodeIds: Set<string>,
+		visitedNodes: Set<string>,
 	): RdfValue {
 		if (node.termType === 'Literal') {
 			const lang = node.language === '' ? undefined : node.language;
@@ -245,12 +272,16 @@ export class RdfXmlSerialiser {
 		}
 
 		// BlankNode tracking (prevent infinite cycles & duplicate inlining).
+		let nodeId: string | undefined;
 		if (node.termType === 'BlankNode') {
-			const nodeId = node.value;
-			if (visitedNodes.has(nodeId)) {
-				return { type: 'NodeRef', nodeId };
+			const id = node.value;
+			if (visitedNodes.has(id)) {
+				return { type: 'NodeRef', nodeId: id };
 			}
-			visitedNodes.add(nodeId);
+			visitedNodes.add(id);
+			if (sharedNodeIds.has(id)) {
+				nodeId = id;
+			}
 		}
 
 		// Container check (Bag, Seq, Alt).
@@ -294,6 +325,7 @@ export class RdfXmlSerialiser {
 					kb,
 					s.object as rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
 					prefixMap,
+					sharedNodeIds,
 					visitedNodes,
 				),
 			);
@@ -321,6 +353,7 @@ export class RdfXmlSerialiser {
 					kb,
 					stmt.object as rdflib.BlankNode | rdflib.NamedNode | rdflib.Literal,
 					prefixMap,
+					sharedNodeIds,
 					visitedNodes,
 				);
 				containerProperties.push({
@@ -345,11 +378,13 @@ export class RdfXmlSerialiser {
 			kb,
 			node as rdflib.BlankNode,
 			prefixMap,
+			sharedNodeIds,
 			visitedNodes,
 		);
 
 		return {
 			type: 'Struct',
+			...(nodeId ? { nodeId } : {}),
 			properties: structProperties,
 		};
 	}
@@ -385,5 +420,23 @@ export class RdfXmlSerialiser {
 		}
 
 		return { namespaceUri: uri, name: uri, prefix: 'ns' };
+	}
+
+	// Count or track references to blank nodes across the store graph
+	private findSharedBlankNodeIds(store: rdflib.IndexedFormula): Set<string> {
+		const counts = new Map<string, number>();
+		for (const statement of store.statements) {
+			if (statement.object.termType === 'BlankNode') {
+				const id = statement.object.value;
+				counts.set(id, (counts.get(id) ?? 0) + 1);
+			}
+		}
+		const shared = new Set<string>();
+		for (const [id, count] of counts) {
+			if (count > 1) {
+				shared.add(id);
+			}
+		}
+		return shared;
 	}
 }

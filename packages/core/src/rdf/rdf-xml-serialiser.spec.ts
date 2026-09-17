@@ -1,3 +1,4 @@
+import { DOMParser } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RdfXmlSerialiser } from './rdf-xml-serialiser.js';
@@ -75,7 +76,7 @@ describe('RdfXmlSerialiser', () => {
 		store.add(docSubject, rdflib.sym(`${DC_NS}subject`), bagNode);
 		store.add(bagNode, rdflib.sym(`${RDF_NS}type`), rdflib.sym(`${RDF_NS}Bag`));
 
-		// Add out of order to verify numerical sorting
+		// Add out of order to verify numerical sorting.
 		store.add(
 			bagNode,
 			rdflib.sym(`${RDF_NS}_2`),
@@ -202,28 +203,27 @@ describe('RdfXmlSerialiser', () => {
 		const xsdDateTime = rdflib.sym(`${XSD_NS}dateTime`);
 		const xsdInteger = rdflib.sym(`${XSD_NS}integer`);
 
-		// 1. Explicit datatype (xsd:dateTime)
 		store.add(
 			docSubject,
 			rdflib.sym(`${XMP_NS}CreateDate`),
 			rdflib.literal('2026-09-16T20:30:00Z', xsdDateTime),
 		);
 
-		// 2. Explicit datatype (xsd:integer)
 		store.add(
 			docSubject,
 			rdflib.sym(`${XMP_NS}Rating`),
 			rdflib.literal('5', xsdInteger),
 		);
 
-		// 3. Plain literal (implicit xsd:string -> should NOT emit rdf:datatype)
+		// Plain literal (implicit xsd:string -> should NOT emit rdf:datatype).
 		store.add(
 			docSubject,
 			rdflib.sym(`${XMP_NS}CreatorTool`),
 			rdflib.literal('pdfa-lab core'),
 		);
 
-		// 4. Language-tagged literal (implicit rdf:langString -> should emit xml:lang, NOT rdf:datatype)
+		// Language-tagged literal (implicit rdf:langString -> should emit
+		// xml:lang, NOT rdf:datatype).
 		store.add(
 			docSubject,
 			rdflib.sym(`${DC_NS}title`),
@@ -236,7 +236,7 @@ describe('RdfXmlSerialiser', () => {
 			[XSD_NS]: 'xsd',
 		});
 
-		// Explicit datatypes must be emitted as rdf:datatype attributes
+		// Explicit datatypes must be emitted as rdf:datatype attributes.
 		expect(xml).toContain(
 			'<xmp:CreateDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-09-16T20:30:00Z</xmp:CreateDate>',
 		);
@@ -244,11 +244,12 @@ describe('RdfXmlSerialiser', () => {
 			'<xmp:Rating rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">5</xmp:Rating>',
 		);
 
-		// Plain string must not carry rdf:datatype="...#string"
+		// Plain string must not carry rdf:datatype="...#string".
 		expect(xml).toContain('<xmp:CreatorTool>pdfa-lab core</xmp:CreatorTool>');
 		expect(xml).not.toContain('XMLSchema#string');
 
-		// Language-tagged literal must carry xml:lang but not rdf:datatype="...#langString"
+		// Language-tagged literal must carry xml:lang but not
+		// rdf:datatype="...#langString".
 		expect(xml).toContain(
 			'<dc:title xml:lang="en-US">English Title</dc:title>',
 		);
@@ -310,26 +311,32 @@ describe('RdfXmlSerialiser', () => {
 		);
 	});
 
-	it('emits rdf:nodeID and breaks infinite recursion on cyclic blank nodes', async () => {
-		const EX_NS = 'http://example.org/ns#';
+it('emits rdf:nodeID and breaks infinite recursion on cyclic blank nodes', async () => {
+    const EX_NS = 'http://example.org/ns#';
 
-		const nodeA = rdflib.blankNode();
-		const nodeB = rdflib.blankNode();
+    const nodeA = rdflib.blankNode();
+    const nodeB = rdflib.blankNode();
 
-		// doc -> nodeA -> nodeB -> nodeA (cycle)
-		store.add(docSubject, rdflib.sym(`${EX_NS}parent`), nodeA);
-		store.add(nodeA, rdflib.sym(`${EX_NS}child`), nodeB);
-		store.add(nodeB, rdflib.sym(`${EX_NS}backToParent`), nodeA);
+    // doc -> nodeA -> nodeB -> nodeA (cycle)
+    store.add(docSubject, rdflib.sym(`${EX_NS}parent`), nodeA);
+    store.add(nodeA, rdflib.sym(`${EX_NS}child`), nodeB);
+    store.add(nodeB, rdflib.sym(`${EX_NS}backToParent`), nodeA);
 
-		// Call serialise without hitting stack overflow
-		const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
+    const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
 
-		expect(xml).toContain('<ex:parent rdf:parseType="Resource">');
-		expect(xml).toContain('<ex:child rdf:parseType="Resource">');
-		expect(xml).toContain(`rdf:nodeID="${nodeA.value}"`);
+    // 1. Verify root node ID is emitted on parent description
+    expect(xml).toContain(`rdf:nodeID="${nodeA.value}"`);
 
-		await expect(xml).toMatchFileSnapshot(
-			'./__snapshots__/cyclic-blank-nodes.xml',
-		);
-	});
+    // 2. Parse XML into a DOM document to verify the back-link attribute directly
+    const dom = new DOMParser().parseFromString(xml, 'text/xml');
+    const backToParentEl = dom.getElementsByTagName('ex:backToParent')[0];
+
+    expect(backToParentEl).toBeDefined();
+    expect(backToParentEl.getAttribute('rdf:nodeID')).toBe(nodeA.value);
+
+    // 3. Match visual structure snapshot
+    await expect(xml).toMatchFileSnapshot(
+        './__snapshots__/cyclic-blank-nodes.xml',
+    );
+});
 });
