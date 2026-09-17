@@ -1,8 +1,4 @@
-import {
-	type RdfLiteral,
-	type RdfStruct,
-	rdfSeq,
-} from '../../../rdf/rdf-schema.js';
+import { type RdfStruct, rdfSeq } from '../../../rdf/rdf-schema.js';
 import { xmpText } from '../core/basic/text.js';
 import { xmpURI } from '../core/derived/uri.js';
 import { pdfaProperty } from './pdfa-property.js';

@@ -14,6 +14,10 @@ extract(process.argv[2]!).catch((err) => {
 async function extract(filename: string) {
 	const bytes = await fs.readFile(filename);
 	const lab = await PDFALab.from(bytes);
-	const output = await lab.extractXmp('text/turtle', 'http://example.com/sample', { flags: 'o' });
+	const output = await lab.extractXmp(
+		'text/turtle',
+		'http://example.com/sample',
+		{ flags: 'o' },
+	);
 	console.log(output);
 }

@@ -7,7 +7,13 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!!**/dist", "!!**/coverage", "!!**/.vitepress", "!!**/snapshots"]
+		"includes": [
+			"**",
+			"!!**/dist",
+			"!!**/coverage",
+			"!!**/.vitepress",
+			"!!**/__snapshots__"
+		]
 	},
 	"formatter": {
 		"enabled": true,
