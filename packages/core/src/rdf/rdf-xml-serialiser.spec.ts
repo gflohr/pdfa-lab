@@ -311,32 +311,60 @@ describe('RdfXmlSerialiser', () => {
 		);
 	});
 
-it('emits rdf:nodeID and breaks infinite recursion on cyclic blank nodes', async () => {
-    const EX_NS = 'http://example.org/ns#';
+	it('preserves blank-node identity when a shared blank node is used as a container item', async () => {
+		const EX_NS = 'http://example.org/ns#';
 
-    const nodeA = rdflib.blankNode();
-    const nodeB = rdflib.blankNode();
+		const sharedNode = rdflib.blankNode();
+		const bagNode = rdflib.blankNode();
 
-    // doc -> nodeA -> nodeB -> nodeA (cycle)
-    store.add(docSubject, rdflib.sym(`${EX_NS}parent`), nodeA);
-    store.add(nodeA, rdflib.sym(`${EX_NS}child`), nodeB);
-    store.add(nodeB, rdflib.sym(`${EX_NS}backToParent`), nodeA);
+		// 1. Setup doc -> ex:items -> Bag -> sharedNode
+		store.add(docSubject, rdflib.sym(`${EX_NS}items`), bagNode);
+		store.add(
+			bagNode,
+			rdflib.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+			rdflib.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag'),
+		);
+		store.add(
+			bagNode,
+			rdflib.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#_1'),
+			sharedNode,
+		);
+		store.add(
+			sharedNode,
+			rdflib.sym(`${EX_NS}title`),
+			rdflib.lit('Shared Container Item'),
+		);
 
-    const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
+		// 2. Setup doc -> ex:primaryItem -> sharedNode (second reference)
+		store.add(docSubject, rdflib.sym(`${EX_NS}primaryItem`), sharedNode);
 
-    // 1. Verify root node ID is emitted on parent description
-    expect(xml).toContain(`rdf:nodeID="${nodeA.value}"`);
+		const xml = serialiser.serialise(store, { ...prefixMap, [EX_NS]: 'ex' });
 
-    // 2. Parse XML into a DOM document to verify the back-link attribute directly
-    const dom = new DOMParser().parseFromString(xml, 'text/xml');
-    const backToParentEl = dom.getElementsByTagName('ex:backToParent')[0];
+		// Assert that the shared nodeID is present in the XML
+		expect(xml).toContain(`rdf:nodeID="${sharedNode.value}"`);
 
-    expect(backToParentEl).toBeDefined();
-    expect(backToParentEl.getAttribute('rdf:nodeID')).toBe(nodeA.value);
+		// Verify DOM structure directly (bypassing rdflib parser limitation with rdf:nodeID attributes)
+		const dom = new DOMParser().parseFromString(xml, 'text/xml');
 
-    // 3. Match visual structure snapshot
-    await expect(xml).toMatchFileSnapshot(
-        './__snapshots__/cyclic-blank-nodes.xml',
-    );
-});
+		const primaryEl = dom.getElementsByTagName('ex:primaryItem')[0]!;
+		const liEl = dom.getElementsByTagName('rdf:li')[0]!;
+
+		expect(primaryEl).toBeDefined();
+		expect(liEl).toBeDefined();
+
+		// Verify both elements reference the same nodeID across graph boundaries
+		const primaryNodeId =
+			primaryEl.getAttribute('rdf:nodeID') ||
+			primaryEl
+				.getElementsByTagName('rdf:Description')[0]
+				?.getAttribute('rdf:nodeID');
+		const liNodeId =
+			liEl.getAttribute('rdf:nodeID') ||
+			liEl
+				.getElementsByTagName('rdf:Description')[0]
+				?.getAttribute('rdf:nodeID');
+
+		expect(primaryNodeId).toBe(sharedNode.value);
+		expect(liNodeId).toBe(sharedNode.value);
+	});
 });

@@ -147,26 +147,16 @@ export class RdfXmlSerialiser {
 			case 'Bag':
 			case 'Seq':
 			case 'Alt': {
-				const container = doc.createElementNS(NS_RDF, `rdf:${value.type}`);
+				const containerEl = doc.createElementNS(NS_RDF, `rdf:${value.type}`);
+
+				// 1. Serialize items
 				for (const item of value.items) {
-					const li = doc.createElementNS(NS_RDF, 'rdf:li');
-					if (item.type === 'Struct') {
-						li.setAttributeNS(NS_RDF, 'rdf:parseType', 'Resource');
-						for (const prop of item.properties) {
-							this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
-							const propEl = doc.createElementNS(
-								prop.namespaceUri,
-								`${prop.prefix}:${prop.name}`,
-							);
-							this.appendRdfValue(doc, rootNode, propEl, prop.value);
-							li.appendChild(propEl);
-						}
-					} else {
-						this.appendRdfValue(doc, rootNode, li, item);
-					}
-					container.appendChild(li);
+					const liEl = doc.createElementNS(NS_RDF, 'rdf:li');
+					this.appendRdfValue(doc, rootNode, liEl, item);
+					containerEl.appendChild(liEl);
 				}
 
+				// 2. Serialize non-membership properties attached directly to the container
 				if (value.properties) {
 					for (const prop of value.properties) {
 						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
@@ -175,11 +165,11 @@ export class RdfXmlSerialiser {
 							`${prop.prefix}:${prop.name}`,
 						);
 						this.appendRdfValue(doc, rootNode, propEl, prop.value);
-						container.appendChild(propEl);
+						containerEl.appendChild(propEl);
 					}
 				}
 
-				parentEl.appendChild(container);
+				parentEl.appendChild(containerEl);
 				break;
 			}
 		}
@@ -393,8 +383,6 @@ export class RdfXmlSerialiser {
 		uri: string,
 		prefixMap: Record<string, string>,
 	): { namespaceUri: string; name: string; prefix: string } {
-		// Check against explicitly registered prefix map
-		// (namespaceUri -> prefix).
 		for (const [nsUri, prefix] of Object.entries(prefixMap)) {
 			if (uri.startsWith(nsUri)) {
 				const name = uri.slice(nsUri.length);
@@ -410,7 +398,6 @@ export class RdfXmlSerialiser {
 			}
 		}
 
-		// Fallback delimiter splitting at '#' or last '/'.
 		const splitIdx = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
 		if (splitIdx !== -1) {
 			const namespaceUri = uri.slice(0, splitIdx + 1);
@@ -422,7 +409,6 @@ export class RdfXmlSerialiser {
 		return { namespaceUri: uri, name: uri, prefix: 'ns' };
 	}
 
-	// Count or track references to blank nodes across the store graph
 	private findSharedBlankNodeIds(store: rdflib.IndexedFormula): Set<string> {
 		const counts = new Map<string, number>();
 		for (const statement of store.statements) {
