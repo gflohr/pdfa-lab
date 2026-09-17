@@ -24,6 +24,7 @@ type RdfValue =
 	| { type: 'Struct'; nodeId?: string; properties: XmpProperty[] }
 	| {
 			type: 'Bag' | 'Seq' | 'Alt';
+			nodeId?: string;
 			items: RdfValue[];
 			properties?: XmpProperty[];
 	  }
@@ -116,7 +117,8 @@ export class RdfXmlSerialiser {
 
 			case 'Struct':
 				if (value.nodeId) {
-					// Shared / Cyclic node: use <rdf:Description rdf:nodeID="..."> inside property tag
+					// Shared / Cyclic node: use
+					// <rdf:Description rdf:nodeID="..."> inside property tag.
 					const descEl = doc.createElementNS(NS_RDF, 'rdf:Description');
 					descEl.setAttributeNS(NS_RDF, 'rdf:nodeID', value.nodeId);
 					for (const prop of value.properties) {
@@ -130,7 +132,8 @@ export class RdfXmlSerialiser {
 					}
 					parentEl.appendChild(descEl);
 				} else {
-					// Uniquely referenced node: standard rdf:parseType="Resource"
+					// Uniquely referenced node: standard
+					// rdf:parseType="Resource".
 					parentEl.setAttributeNS(NS_RDF, 'rdf:parseType', 'Resource');
 					for (const prop of value.properties) {
 						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
@@ -149,14 +152,19 @@ export class RdfXmlSerialiser {
 			case 'Alt': {
 				const containerEl = doc.createElementNS(NS_RDF, `rdf:${value.type}`);
 
-				// 1. Serialize items
+				if (value.nodeId) {
+					containerEl.setAttributeNS(NS_RDF, 'rdf:nodeID', value.nodeId);
+				}
+
+				// 1. Serialise items.
 				for (const item of value.items) {
 					const liEl = doc.createElementNS(NS_RDF, 'rdf:li');
 					this.appendRdfValue(doc, rootNode, liEl, item);
 					containerEl.appendChild(liEl);
 				}
 
-				// 2. Serialize non-membership properties attached directly to the container
+				// 2. Serialise non-membership properties attached directly to
+				// the container.
 				if (value.properties) {
 					for (const prop of value.properties) {
 						this.declareNamespace(rootNode, prop.prefix, prop.namespaceUri);
@@ -187,7 +195,8 @@ export class RdfXmlSerialiser {
 	}
 
 	/**
-	 * Converts rdflib store statements for a subject into a structured XmpProperty[] tree.
+	 * Converts rdflib store statements for a subject into a structured
+	 * XmpProperty[] tree.
 	 */
 	private extractXmpProperties(
 		kb: rdflib.IndexedFormula,
@@ -356,6 +365,7 @@ export class RdfXmlSerialiser {
 
 			return {
 				type: containerType,
+				...(nodeId ? { nodeId } : {}),
 				items,
 				...(containerProperties.length > 0
 					? { properties: containerProperties }

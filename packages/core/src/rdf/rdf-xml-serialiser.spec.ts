@@ -2,6 +2,7 @@ import { DOMParser } from '@xmldom/xmldom';
 import * as rdflib from 'rdflib';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RdfXmlSerialiser } from './rdf-xml-serialiser.js';
+import { RDF } from '../xmp/xmp-document.js';
 
 describe('RdfXmlSerialiser', () => {
 	const BASE_IRI = 'urn:xmp:doc';
@@ -366,5 +367,58 @@ describe('RdfXmlSerialiser', () => {
 
 		expect(primaryNodeId).toBe(sharedNode.value);
 		expect(liNodeId).toBe(sharedNode.value);
+	});
+
+	// This test fails, and it looks like this is a bug in rdflib.js.
+	// Investigate into it, and maybe file a bug report.
+	it.skip('preserves shared container identity across RDF/XML round trips', () => {
+		const store = rdflib.graph();
+		const document = rdflib.sym('urn:xmp:doc');
+		const container = rdflib.blankNode('shared-container');
+
+		const rdfType = RDF('type');
+		const rdfBag = RDF('Bag');
+		const rdf1 = RDF('_1');
+
+		const dcTitle = rdflib.sym('http://purl.org/dc/elements/1.1/title');
+		const dcSubject = rdflib.sym('http://purl.org/dc/elements/1.1/subject');
+
+		store.add(document, dcTitle, container);
+		store.add(document, dcSubject, container);
+		store.add(container, rdfType, rdfBag);
+		store.add(container, rdf1, rdflib.literal('Brave New World', 'en-US'));
+
+		const serialiser = new RdfXmlSerialiser('urn:xmp:doc');
+
+		const xml = serialiser.serialise(store, {
+			'http://purl.org/dc/elements/1.1/': 'dc',
+		});
+
+		const reparsed = rdflib.graph();
+		rdflib.parse(xml, reparsed, 'urn:xmp:doc', 'application/rdf+xml');
+
+		const reparsedTitle = reparsed.any(
+			rdflib.sym('urn:xmp:doc'),
+			dcTitle,
+			null,
+		) as rdflib.BlankNode;
+
+		const reparsedSubject = reparsed.any(
+			rdflib.sym('urn:xmp:doc'),
+			dcSubject,
+			null,
+		);
+
+		expect(reparsedTitle).not.toBeNull();
+		expect(reparsedSubject).not.toBeNull();
+		expect(reparsedTitle!.termType).toBe('BlankNode');
+		expect(reparsedSubject!.termType).toBe('BlankNode');
+
+		expect(reparsedTitle!.equals(reparsedSubject!)).toBe(true);
+
+		// This assertion fails!
+		expect(reparsed.any(reparsedTitle!, rdfType, rdfBag)).not.toBeNull();
+
+		expect(reparsed.any(reparsedTitle!, rdf1, null)).not.toBeNull();
 	});
 });
